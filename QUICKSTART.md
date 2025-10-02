@@ -8,29 +8,62 @@ Simple deployment of FortiCNAPP agents using official installation methods and A
 2. **FortiCNAPP agent token** from your account
 3. **EC2 instances** with SSM agent installed and proper IAM roles
 
-## Quick Deployment
+## AWS CloudShell (Recommended)
 
-### 1. Deploy Linux Agents
+AWS CloudShell is pre-configured and ready to use:
 
 ```bash
-cd linux
-./deploy-linux.sh "your-agent-token-here"
+# Clone the repository
+git clone https://github.com/andrewbearsley/forticnapp-aws-systems-manager-agent-install.git
+cd forticnapp-aws-systems-manager-agent-install
+
+# Deploy Linux agents
+cd linux && ./deploy-linux.sh "your-agent-token-here"
+
+# Deploy Windows agents  
+cd ../windows && ./deploy-windows.sh "your-agent-token-here"
 ```
 
-### 2. Deploy Windows Agents
+## Local Environment
+
+If running from your local machine:
 
 ```bash
-cd windows
-./deploy-windows.sh "your-agent-token-here"
+# Clone the repository
+git clone https://github.com/andrewbearsley/forticnapp-aws-systems-manager-agent-install.git
+cd forticnapp-aws-systems-manager-agent-install
+
+# Ensure AWS CLI is configured
+aws configure list
+
+# Deploy agents
+cd linux && ./deploy-linux.sh "your-agent-token-here"
+cd ../windows && ./deploy-windows.sh "your-agent-token-here"
 ```
 
-### 3. Deploy to Specific Instances
+## AWS Region Support
+
+**Works with all AWS regions!** The scripts automatically detect your AWS CLI region configuration.
 
 ```bash
-# Linux
+# Check current region
+aws configure get region
+
+# Use specific region
+export AWS_REGION="eu-west-1"
+./deploy-linux.sh "your-token"
+
+# Or specify inline
+AWS_REGION="ap-southeast-1" ./deploy-windows.sh "your-token"
+```
+
+## Deploy to Specific Instances
+
+```bash
+# Linux - specific instances
 ./deploy-linux.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
 
-# Windows
+# Windows - specific instances
 ./deploy-windows.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
 ```
 

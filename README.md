@@ -17,6 +17,38 @@ This solution uses the official FortiCNAPP installation methods:
 
 > **Note**: If your EC2 instances don't have AWS Systems Manager set up, see [WITHOUT-SSM.md](WITHOUT-SSM.md) for alternative deployment methods.
 
+## AWS CloudShell Usage
+
+AWS CloudShell is pre-configured with AWS CLI and works perfectly with these scripts:
+
+```bash
+# Clone the repository
+git clone https://github.com/andrewbearsley/forticnapp-aws-systems-manager-agent-install.git
+cd forticnapp-aws-systems-manager-agent-install
+
+# Deploy Linux agents
+cd linux && ./deploy-linux.sh "your-agent-token-here"
+
+# Deploy Windows agents  
+cd ../windows && ./deploy-windows.sh "your-agent-token-here"
+```
+
+## AWS Region Support
+
+**Works with all AWS regions!** The scripts automatically:
+- Use your current AWS CLI region configuration
+- Fall back to `us-east-1` if no region is set
+- Allow override via `AWS_REGION` environment variable
+
+```bash
+# Use specific region
+export AWS_REGION="eu-west-1"
+./deploy-linux.sh "your-token"
+
+# Or specify inline
+AWS_REGION="ap-southeast-1" ./deploy-windows.sh "your-token"
+```
+
 ## Project Structure
 
 ```
