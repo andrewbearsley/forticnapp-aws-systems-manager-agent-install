@@ -18,18 +18,28 @@ This solution uses the FortiCNAPP agent installation methods:
 
 ### AWS CloudShell (Recommended)
 
-AWS CloudShell is pre-configured and ready to use:
-
 ```bash
 # Clone the repository
 git clone https://github.com/andrewbearsley/forticnapp-aws-systems-manager-agent-install.git
 cd forticnapp-aws-systems-manager-agent-install
 
-# Deploy Linux agents
-cd scripts && ./deploy-linux.sh "your-agent-token-here"
+# Set AWS region
+export AWS_REGION="your-aws-region"
 
-# Deploy Windows agents  
-cd scripts && ./deploy-windows.sh "your-agent-token-here"
+# Check all instances in current region
+./scripts/check-ssm.sh
+
+# Check SSM status for all instances
+./scripts/check-ssm.sh
+
+# Setup SSM on existing instances (if not ready)
+./scripts/setup-ssm.sh "i-1234567890abcdef0"
+
+# Deploy Linux agents
+./scripts/deploy-linux.sh "your-agent-token-here"
+
+# Deploy Windows agents
+./scripts/deploy-windows.sh "your-agent-token-here"
 ```
 
 ### Check if EC2 Instances are SSM-Ready
@@ -37,14 +47,12 @@ cd scripts && ./deploy-windows.sh "your-agent-token-here"
 Before deploying, verify your instances are managed by Systems Manager:
 
 ```bash
-# Check all instances in current region
-cd scripts && ./check-ssm.sh
 
 # Check specific instances
-cd scripts && ./check-ssm.sh "i-1234567890abcdef0 i-0987654321fedcba0"
+./scripts/check-ssm.sh "i-1234567890abcdef0 i-0987654321fedcba0"
 
 # Setup SSM on existing instances (if not ready)
-cd scripts && ./setup-ssm.sh "i-1234567890abcdef0"
+./scripts/setup-ssm.sh "i-1234567890abcdef0"
 ```
 
 **Expected output for SSM-ready instances:**
@@ -65,24 +73,9 @@ cd forticnapp-aws-systems-manager-agent-install
 aws configure list
 
 # Deploy agents
-cd scripts && ./deploy-linux.sh "your-agent-token-here"
-cd scripts && ./deploy-windows.sh "your-agent-token-here"
-```
-
-### AWS Region Support
-
-**Works with all AWS regions!** The scripts automatically:
-- Use your current AWS CLI region configuration
-- Fall back to `us-east-1` if no region is set
-- Allow override via `AWS_REGION` environment variable
-
-```bash
-# Use specific region
-export AWS_REGION="eu-west-1"
-cd scripts && ./deploy-linux.sh "your-token"
-
-# Or specify inline
-AWS_REGION="ap-southeast-1" cd scripts && ./deploy-windows.sh "your-token"
+export AWS_REGION="your-aws-region"
+./scripts/deploy-linux.sh "your-agent-token-here"
+./scripts/deploy-windows.sh "your-agent-token-here"
 ```
 
 ### Deploy to Specific Instances
@@ -94,17 +87,6 @@ cd scripts && ./deploy-linux.sh "your-token" "i-1234567890abcdef0 i-0987654321fe
 # Windows - specific instances
 cd scripts && ./deploy-windows.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
 ```
-
-## Prerequisites
-
-- AWS CLI configured with appropriate permissions
-- AWS Systems Manager (SSM) agent installed on target EC2 instances
-- EC2 instances with appropriate IAM roles for SSM access
-- FortiCNAPP agent token
-
-> **Note**: If your EC2 instances don't have AWS Systems Manager set up, see [WITHOUT-SSM.md](WITHOUT-SSM.md) for alternative deployment methods.
-> 
-> **Need to set up SSM?** See the [AWS Systems Manager setup guide](https://docs.aws.amazon.com/systems-manager/latest/userguide/setup.html) for EC2 instances.
 
 ## AWS Region Support
 
@@ -126,45 +108,18 @@ AWS_REGION="ap-southeast-1" cd scripts && ./deploy-windows.sh "your-token"
 
 ```
 forticnapp-aws-systems-manager/
-├── README.md
-├── QUICKSTART.md
-├── WITHOUT-SSM.md              # Alternative deployment methods
-├── LICENSE
 ├── scripts/
+│   ├── deploy-linux.sh          # Linux agent deployment
+│   ├── deploy-windows.sh        # Windows agent deployment
 │   ├── check-ssm.sh            # Check SSM readiness
-│   ├── setup-ssm.sh            # Setup SSM on existing instances
-│   ├── deploy-linux.sh          # Linux deployment script
-│   └── deploy-windows.sh       # Windows deployment script
-└── test/
-    ├── README.md               # Test environment documentation
-    ├── create-test-instances.sh # Create test EC2 instances
-    └── cleanup-test-instances.sh # Clean up test resources
-```
-
-## Quick Start
-
-### Deploy Linux Agents
-
-```bash
-cd scripts
-./deploy-linux.sh "your-agent-token-here"
-```
-
-### Deploy Windows Agents
-
-```bash
-cd scripts
-./deploy-windows.sh "your-agent-token-here"
-```
-
-### Deploy to Specific Instances
-
-```bash
-# Linux
-cd scripts && ./deploy-linux.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
-
-# Windows
-cd scripts && ./deploy-windows.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
+│   └── setup-ssm.sh            # Setup SSM on existing instances
+├── test/
+│   ├── create-test-instances.sh # Create test EC2 instances
+│   ├── cleanup-test-instances.sh # Cleanup test instances
+│   └── README.md               # Test environment documentation
+├── README.md                   # This file
+├── WITHOUT-SSM.md             # Alternative deployment methods
+└── .gitignore                 # Git ignore file
 ```
 
 ## What Happens
