@@ -91,8 +91,13 @@ cd scripts && ./deploy-windows.sh "your-token" "i-1234567890abcdef0 i-0987654321
 ### Linux Deployment
 1. Downloads official `install.sh` from FortiCNAPP
 2. Finds all Linux EC2 instances
-3. Runs installation via AWS Systems Manager
+3. Runs installation via AWS Systems Manager with correct token syntax
 4. Monitors progress and verifies installation
+
+**Installation Command:**
+```bash
+curl -sSL https://packages.lacework.net/install.sh -o /tmp/install.sh && sudo bash /tmp/install.sh YOUR_TOKEN
+```
 
 ### Windows Deployment
 1. Downloads official `LWDatacollector.msi` installer
@@ -110,7 +115,7 @@ cd scripts && ./deploy-windows.sh "your-token" "i-1234567890abcdef0 i-0987654321
 aws ssm send-command \
   --document-name "AWS-RunShellScript" \
   --instance-ids "i-1234567890abcdef0" \
-  --parameters 'commands=["systemctl status lacework"]'
+  --parameters 'commands=["systemctl status datacollector"]'
 ```
 
 **Windows:**

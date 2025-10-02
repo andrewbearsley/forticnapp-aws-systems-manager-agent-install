@@ -127,8 +127,13 @@ cd scripts && ./deploy-windows.sh "your-token" "i-1234567890abcdef0 i-0987654321
 The Linux script:
 1. Downloads the official `install.sh` script from FortiCNAPP
 2. Finds all Linux EC2 instances (or uses specified ones)
-3. Runs the installation via AWS Systems Manager
+3. Runs the installation via AWS Systems Manager with correct token syntax
 4. Monitors deployment progress and verifies installation
+
+**Installation Command:**
+```bash
+curl -sSL https://packages.lacework.net/install.sh -o /tmp/install.sh && sudo bash /tmp/install.sh YOUR_TOKEN
+```
 
 **Supported Linux Distributions:**
 - Amazon Linux 2
@@ -235,6 +240,7 @@ cd ../test && ./cleanup-test-instances.sh
 
 **Linux:**
 - Agent logs: `/var/log/lacework/`
+- Service status: `systemctl status datacollector`
 - SSM logs: `/var/log/amazon/ssm/`
 
 **Windows:**

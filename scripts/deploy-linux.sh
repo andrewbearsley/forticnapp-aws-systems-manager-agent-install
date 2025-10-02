@@ -150,7 +150,7 @@ deploy_agents() {
         --region "$AWS_REGION" \
         --document-name "AWS-RunShellScript" \
         --instance-ids "${INSTANCE_ARRAY[@]}" \
-        --parameters "commands=[\"curl -sSL https://packages.lacework.net/install.sh | bash -s -- -t \\\"$AGENT_TOKEN\\\"\"]" \
+        --parameters "commands=[\"curl -sSL https://packages.lacework.net/install.sh -o /tmp/install.sh && sudo bash /tmp/install.sh '$AGENT_TOKEN'\"]" \
         --query 'Command.CommandId' \
         --output text)
     
@@ -222,7 +222,7 @@ verify_installation() {
         --region "$AWS_REGION" \
         --document-name "AWS-RunShellScript" \
         --instance-ids "${INSTANCE_ARRAY[@]}" \
-        --parameters 'commands=["systemctl is-active lacework"]' \
+        --parameters 'commands=["systemctl is-active datacollector"]' \
         --query 'Command.CommandId' \
         --output text)
     
@@ -264,7 +264,7 @@ main() {
     verify_installation
     
     print_header "Deployment completed!"
-    print_status "You can monitor agent logs with: journalctl -u lacework -f"
+    print_status "You can monitor agent logs with: journalctl -u datacollector -f"
 }
 
 # Run main function
