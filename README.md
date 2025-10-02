@@ -32,8 +32,9 @@ export AWS_REGION="your-aws-region"
 # [Optional] Setup SSM on all instances
 ./scripts/setup-ssm.sh
 
-# [Optional] Setup SSM on existing instances (if not ready)
+# [Optional] Setup SSM on specific instances
 ./scripts/setup-ssm.sh "i-1234567890abcdef0"
+./scripts/setup-ssm.sh instances.txt
 
 # Deploy Linux agents
 ./scripts/deploy-linux.sh "your-agent-token-here"
@@ -51,8 +52,12 @@ Before deploying, verify your instances are managed by Systems Manager:
 # Check specific instances
 ./scripts/check-ssm.sh "i-1234567890abcdef0 i-0987654321fedcba0"
 
+# Check instances from file
+./scripts/check-ssm.sh instances.txt
+
 # Setup SSM on existing instances (if not ready)
 ./scripts/setup-ssm.sh "i-1234567890abcdef0"
+./scripts/setup-ssm.sh instances.txt
 ```
 
 **Expected output for SSM-ready instances:**
@@ -86,7 +91,39 @@ export AWS_REGION="your-aws-region"
 
 # Windows - specific instances
 ./scripts/deploy-windows.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
+
+# Using instance list file
+./scripts/deploy-linux.sh "your-token" instances.txt
+./scripts/deploy-windows.sh "your-token" instances.txt
 ```
+
+### Instance List Files
+
+For managing large numbers of instances, you can create a file with instance IDs:
+
+```bash
+# Create instance list file
+cat > instances.txt << EOF
+# Production Linux servers
+i-1234567890abcdef0
+i-0987654321fedcba0
+
+# Production Windows servers
+i-abcdef1234567890
+i-fedcba0987654321
+EOF
+
+# Use with any script
+./scripts/setup-ssm.sh instances.txt
+./scripts/deploy-linux.sh "your-token" instances.txt
+./scripts/check-ssm.sh instances.txt
+```
+
+**File format:**
+- One instance ID per line
+- Lines starting with `#` are comments
+- Empty lines are ignored
+- See `instances.txt.example` for reference
 
 ## AWS Region Support
 
@@ -117,6 +154,7 @@ forticnapp-aws-systems-manager/
 │   ├── create-test-instances.sh # Create test EC2 instances
 │   ├── cleanup-test-instances.sh # Cleanup test instances
 │   └── README.md               # Test environment documentation
+├── instances.txt.example       # Example instance list file format
 ├── README.md                   # This file
 ├── WITHOUT-SSM.md             # Alternative deployment methods
 └── .gitignore                 # Git ignore file
@@ -239,6 +277,7 @@ forticnapp-aws-systems-manager/
 │   ├── create-test-instances.sh # Create test EC2 instances
 │   ├── cleanup-test-instances.sh # Cleanup test instances
 │   └── README.md               # Test environment documentation
+├── instances.txt.example       # Example instance list file format
 ├── README.md                   # This file
 ├── WITHOUT-SSM.md             # Alternative deployment methods
 └── .gitignore                 # Git ignore file
@@ -342,6 +381,10 @@ cd test && ./create-test-instances.sh
 # Test deployment
 ./scripts/deploy-linux.sh "your-token"
 ./scripts/deploy-windows.sh "your-token"
+
+# Test with specific instances
+./scripts/deploy-linux.sh "your-token" "i-test123 i-test456"
+./scripts/deploy-windows.sh "your-token" "i-test789"
 
 # Clean up when done (important to avoid charges!)
 cd test && ./cleanup-test-instances.sh

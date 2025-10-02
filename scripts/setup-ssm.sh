@@ -23,6 +23,20 @@ AWS_REGION="${AWS_REGION:-us-east-1}"
 ROLE_NAME="FortiCNAPP-SSM-Role"
 INSTANCE_IDS="$1"
 
+# Function to load instance IDs from file
+load_instance_ids() {
+    if [ -f "$INSTANCE_IDS" ]; then
+        print_status "Loading instance IDs from file: $INSTANCE_IDS"
+        # Read file, remove comments and empty lines, join with spaces
+        INSTANCE_IDS=$(grep -v '^#' "$INSTANCE_IDS" | grep -v '^$' | tr '\n' ' ' | sed 's/[[:space:]]*$//')
+        if [ -z "$INSTANCE_IDS" ]; then
+            print_error "No valid instance IDs found in file: $INSTANCE_IDS"
+            exit 1
+        fi
+        print_status "Loaded instance IDs: $INSTANCE_IDS"
+    fi
+}
+
 # Function to check prerequisites
 check_prerequisites() {
     print_header "Checking prerequisites..."
@@ -117,6 +131,33 @@ EOF
     configure_account_ssm_role
 }
 
+# Function to check existing account-level SSM role
+check_existing_ssm_role() {
+    print_header "Checking existing account-level SSM role..."
+    
+    # Get account ID
+    ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+    
+    # Check if account-level SSM role is already configured
+    SETTING_ID="arn:aws:ssm:${AWS_REGION}:${ACCOUNT_ID}:servicesetting/ssm/managed-instance/default-ec2-instance-management-role"
+    
+    EXISTING_ROLE=$(aws ssm get-service-setting \
+        --setting-id "$SETTING_ID" \
+        --region "$AWS_REGION" \
+        --query 'ServiceSetting.SettingValue' \
+        --output text 2>/dev/null || echo "None")
+    
+    if [ "$EXISTING_ROLE" != "None" ] && [ -n "$EXISTING_ROLE" ]; then
+        print_status "Account-level SSM role already configured: $EXISTING_ROLE"
+        print_status "Using existing role instead of creating a new one"
+        ROLE_NAME="$EXISTING_ROLE"
+        return 0  # Use existing role
+    else
+        print_status "No account-level SSM role found. Will create: $ROLE_NAME"
+        return 1  # Need to create role
+    fi
+}
+
 # Function to configure account-level SSM role
 configure_account_ssm_role() {
     print_header "Configuring account-level SSM role..."
@@ -188,6 +229,9 @@ check_instances_status() {
         
         if [ "$SSM_CHECK" = "Online" ] && [ "$CURRENT_ROLE" != "None" ] && [ -n "$CURRENT_ROLE" ]; then
             print_status "✅ $instance_id ($INSTANCE_NAME) - Already configured (SSM: Online, IAM: Attached)"
+            instances_ready=$((instances_ready + 1))
+        elif [ "$SSM_CHECK" = "Online" ]; then
+            print_status "✅ $instance_id ($INSTANCE_NAME) - Already managed by SSM (SSM: Online, IAM: $([ "$CURRENT_ROLE" = "None" ] && echo "None" || echo "Attached"))"
             instances_ready=$((instances_ready + 1))
         else
             print_warning "⚠️ $instance_id ($INSTANCE_NAME) - Needs configuration (SSM: $SSM_CHECK, IAM: $([ "$CURRENT_ROLE" = "None" ] && echo "None" || echo "Attached"))"
@@ -500,6 +544,7 @@ main() {
     echo
     
     check_prerequisites
+    load_instance_ids
     get_all_instances
     
     # Check if instances need configuration
@@ -510,7 +555,13 @@ main() {
         exit 0
     fi
     
-    create_ssm_role
+    # Check for existing account-level SSM role
+    if check_existing_ssm_role; then
+        print_status "Using existing account-level SSM role: $ROLE_NAME"
+    else
+        create_ssm_role
+    fi
+    
     install_ssm_agent
     attach_iam_role
     wait_for_ssm_registration
@@ -522,7 +573,7 @@ main() {
 
 # Show usage if help requested
 if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
-    echo "Usage: $0 [instance-ids]"
+    echo "Usage: $0 [instance-ids-or-file]"
     echo
     echo "Sets up Systems Manager on existing EC2 instances:"
     echo "  - Creates IAM role with SSM permissions"
@@ -534,6 +585,14 @@ if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
     echo "  $0                                    # Setup SSM on all running instances"
     echo "  $0 i-1234567890abcdef0               # Setup SSM on specific instance"
     echo "  $0 'i-1234567890abcdef0 i-0987654321fedcba0'  # Setup SSM on multiple instances"
+    echo "  $0 instances.txt                     # Setup SSM on instances listed in file"
+    echo
+    echo "File format (one instance ID per line, # for comments):"
+    echo "  # Production servers"
+    echo "  i-1234567890abcdef0"
+    echo "  i-0987654321fedcba0"
+    echo "  # Test servers"
+    echo "  i-abcdef1234567890"
     echo
     echo "Environment variables:"
     echo "  AWS_REGION    AWS region (default: us-east-1)"

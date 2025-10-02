@@ -1,0 +1,11 @@
+# Example instance list file
+# Lines starting with # are comments and will be ignored
+# Empty lines are also ignored
+
+# Production Linux servers
+i-1234567890abcdef0
+i-0987654321fedcba0
+
+# Production Windows servers
+i-abcdef1234567890
+i-fedcba0987654321

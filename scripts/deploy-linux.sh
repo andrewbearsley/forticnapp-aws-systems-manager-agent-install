@@ -55,14 +55,29 @@ AWS_REGION="${AWS_REGION:-us-east-1}"
 
 # Check arguments
 if [ $# -lt 1 ]; then
-    print_error "Usage: $0 <agent-token> [instance-ids]"
+    print_error "Usage: $0 <agent-token> [instance-ids-or-file]"
     print_status "Example: $0 'your-token-here' 'i-1234567890abcdef0 i-0987654321fedcba0'"
+    print_status "Example: $0 'your-token-here' instances.txt"
     print_status "Example: $0 'your-token-here'  # Deploy to all Linux instances"
     exit 1
 fi
 
 AGENT_TOKEN="$1"
 INSTANCE_IDS="$2"
+
+# Function to load instance IDs from file
+load_instance_ids() {
+    if [ -n "$INSTANCE_IDS" ] && [ -f "$INSTANCE_IDS" ]; then
+        print_status "Loading instance IDs from file: $INSTANCE_IDS"
+        # Read file, remove comments and empty lines, join with spaces
+        INSTANCE_IDS=$(grep -v '^#' "$INSTANCE_IDS" | grep -v '^$' | tr '\n' ' ' | sed 's/[[:space:]]*$//')
+        if [ -z "$INSTANCE_IDS" ]; then
+            print_error "No valid instance IDs found in file: $INSTANCE_IDS"
+            exit 1
+        fi
+        print_status "Loaded instance IDs: $INSTANCE_IDS"
+    fi
+}
 
 # Function to check prerequisites
 check_prerequisites() {
@@ -257,6 +272,7 @@ main() {
     print_header "FortiCNAPP Linux Agent Deployment"
     
     check_prerequisites
+    load_instance_ids
     download_install_script
     get_linux_instances
     confirm_deployment
