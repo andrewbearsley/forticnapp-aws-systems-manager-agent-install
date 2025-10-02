@@ -26,9 +26,6 @@ cd forticnapp-aws-systems-manager-agent-install
 # Set AWS region
 export AWS_REGION="your-aws-region"
 
-# Check all instances in current region
-./scripts/check-ssm.sh
-
 # Check SSM status for all instances
 ./scripts/check-ssm.sh
 
