@@ -366,8 +366,30 @@ wait_for_ssm_registration() {
         
         if [ "$SSM_STATUS" != "Online" ]; then
             print_error "❌ Instance $instance_id failed to register with SSM"
+            print_manual_ssm_restart_instructions "$instance_id"
         fi
     done
+}
+
+# Function to show manual SSM restart instructions
+print_manual_ssm_restart_instructions() {
+    local instance_id="$1"
+    
+    print_header "Manual SSM Agent Restart Required"
+    print_warning "The SSM agent needs to be restarted to pick up the new IAM role."
+    print_status ""
+    print_status "Option 1: Restart via SSH (if you have SSH access):"
+    print_status "  ssh -i your-key.pem ec2-user@$(aws ec2 describe-instances --region $AWS_REGION --instance-ids $instance_id --query 'Reservations[*].Instances[*].PublicIpAddress' --output text)"
+    print_status "  sudo systemctl restart amazon-ssm-agent"
+    print_status "  sudo systemctl status amazon-ssm-agent"
+    print_status ""
+    print_status "Option 2: Restart the EC2 instance:"
+    print_status "  aws ec2 reboot-instances --region $AWS_REGION --instance-ids $instance_id"
+    print_status ""
+    print_status "Option 3: Wait 5-10 minutes for automatic restart (less reliable)"
+    print_status ""
+    print_status "After restart, check status with:"
+    print_status "  ./scripts/check-ssm.sh $instance_id"
 }
 
 # Function to show final status

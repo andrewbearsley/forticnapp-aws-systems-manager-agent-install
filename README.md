@@ -29,7 +29,10 @@ export AWS_REGION="your-aws-region"
 # Check SSM status for all instances
 ./scripts/check-ssm.sh
 
-# Setup SSM on existing instances (if not ready)
+# [Optional] Setup SSM on all instances
+./scripts/setup-ssm.sh
+
+# [Optional] Setup SSM on existing instances (if not ready)
 ./scripts/setup-ssm.sh "i-1234567890abcdef0"
 
 # Deploy Linux agents
@@ -246,6 +249,67 @@ forticnapp-aws-systems-manager/
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `AWS_REGION` | AWS region for deployment | us-east-1 |
+
+## Troubleshooting
+
+### SSM Connection Issues
+
+If instances show "ConnectionLost" status after running `setup-ssm.sh`:
+
+**Root Cause:** The SSM agent needs to be restarted to pick up new IAM role credentials.
+
+**Solutions:**
+
+1. **Restart SSM Agent via SSH:**
+   ```bash
+   # Get instance public IP
+   aws ec2 describe-instances --instance-ids i-1234567890abcdef0 --query 'Reservations[*].Instances[*].PublicIpAddress' --output text
+   
+   # SSH to instance and restart SSM agent
+   ssh -i your-key.pem ec2-user@PUBLIC_IP
+   sudo systemctl restart amazon-ssm-agent
+   sudo systemctl status amazon-ssm-agent
+   ```
+
+2. **Restart EC2 Instance:**
+   ```bash
+   aws ec2 reboot-instances --instance-ids i-1234567890abcdef0
+   ```
+
+3. **Wait for Automatic Restart:**
+   - Wait 5-10 minutes for the agent to automatically restart (less reliable)
+
+**Verify Fix:**
+```bash
+./scripts/check-ssm.sh i-1234567890abcdef0
+```
+
+### Common Issues
+
+1. **SSM Agent Not Installed**
+   - Ensure SSM agent is installed and running
+   - Verify IAM roles have SSM permissions
+
+2. **Network Connectivity**
+   - Check security groups allow outbound HTTPS
+   - Verify instances can reach FortiCNAPP endpoints
+
+3. **Permission Issues**
+   - Ensure deployment user has SSM and EC2 permissions
+   - Verify FortiCNAPP token is valid
+
+### Useful Commands
+
+```bash
+# Check SSM agent status
+aws ssm describe-instance-information --filters "Key=InstanceIds,Values=i-1234567890abcdef0"
+
+# List recent commands
+aws ssm list-commands --max-items 10
+
+# Get command details
+aws ssm get-command-invocation --command-id "command-id" --instance-id "i-1234567890abcdef0"
+```
 
 ## Log Locations
 
