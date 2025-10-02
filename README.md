@@ -46,6 +46,9 @@ cd scripts && ./check-ssm.sh
 # Check specific instances
 cd scripts && ./check-ssm.sh "i-1234567890abcdef0 i-0987654321fedcba0"
 
+# Setup SSM on existing instances (if not ready)
+cd scripts && ./setup-ssm.sh "i-1234567890abcdef0"
+
 # Manual check commands
 aws ssm describe-instance-information --query 'InstanceInformationList[*].[InstanceId,ComputerName,PlatformType,PingStatus]' --output table
 aws ssm describe-instance-information --filters "Key=InstanceIds,Values=i-1234567890abcdef0"
@@ -80,10 +83,15 @@ forticnapp-aws-systems-manager/
 ├── QUICKSTART.md
 ├── WITHOUT-SSM.md              # Alternative deployment methods
 ├── LICENSE
-└── scripts/
-    ├── check-ssm.sh            # Check SSM readiness
-    ├── deploy-linux.sh          # Linux deployment script
-    └── deploy-windows.sh       # Windows deployment script
+├── scripts/
+│   ├── check-ssm.sh            # Check SSM readiness
+│   ├── setup-ssm.sh            # Setup SSM on existing instances
+│   ├── deploy-linux.sh          # Linux deployment script
+│   └── deploy-windows.sh       # Windows deployment script
+└── test/
+    ├── README.md               # Test environment documentation
+    ├── create-test-instances.sh # Create test EC2 instances
+    └── cleanup-test-instances.sh # Clean up test resources
 ```
 
 ## Quick Start
@@ -185,6 +193,27 @@ aws ssm send-command \
   --instance-ids "i-0987654321fedcba0" \
   --parameters 'commands=["Get-WinEvent -FilterHashtable @{LogName=\"Application\"; ProviderName=\"LaceworkAgent\"} -MaxEvents 50"]'
 ```
+
+## Testing
+
+For testing the deployment scripts, you can create test EC2 instances:
+
+```bash
+# Create test instances (Linux + Windows with SSM)
+cd test && ./create-test-instances.sh
+
+# Wait 2-3 minutes for SSM registration, then check
+cd ../scripts && ./check-ssm.sh
+
+# Test deployment
+cd scripts && ./deploy-linux.sh "your-token"
+cd scripts && ./deploy-windows.sh "your-token"
+
+# Clean up when done (important to avoid charges!)
+cd ../test && ./cleanup-test-instances.sh
+```
+
+**⚠️ Cost Warning**: Test instances incur AWS charges (~$0.05/hour). Always run cleanup when done!
 
 ## Troubleshooting
 
