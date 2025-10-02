@@ -35,6 +35,30 @@ cd linux && ./deploy-linux.sh "your-agent-token-here"
 cd ../windows && ./deploy-windows.sh "your-agent-token-here"
 ```
 
+### Check if EC2 Instances are SSM-Ready
+
+Before deploying, verify your instances are managed by Systems Manager:
+
+```bash
+# Check if specific instance is managed by SSM
+aws ssm describe-instance-information --filters "Key=InstanceIds,Values=i-1234567890abcdef0"
+
+# List all instances managed by SSM in current region
+aws ssm describe-instance-information --query 'InstanceInformationList[*].[InstanceId,ComputerName,PlatformType,PingStatus]' --output table
+
+# Check SSM agent status on a specific instance (if accessible)
+aws ssm send-command \
+  --document-name "AWS-RunShellScript" \
+  --instance-ids "i-1234567890abcdef0" \
+  --parameters 'commands=["systemctl status amazon-ssm-agent"]' \
+  --query 'Command.CommandId' --output text
+```
+
+**Expected output for SSM-ready instances:**
+- `PingStatus: Online` 
+- `LastPingDateTime: Recent timestamp`
+- `PlatformType: Linux` or `Windows`
+
 ## AWS Region Support
 
 **Works with all AWS regions!** The scripts automatically:
