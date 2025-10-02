@@ -168,6 +168,11 @@ install_ssm_agent() {
         PUBLIC_IP=$(echo "$INSTANCE_INFO" | awk '{print $5}')
         KEY_NAME=$(echo "$INSTANCE_INFO" | awk '{print $6}')
         
+        # Convert None platform to Linux for better display
+        if [ "$PLATFORM" = "None" ] || [ -z "$PLATFORM" ]; then
+            PLATFORM="Linux"
+        fi
+        
         print_status "Instance: $instance_id ($INSTANCE_NAME)"
         print_status "Platform: $PLATFORM, State: $STATE"
         print_status "Public IP: $PUBLIC_IP, Key: $KEY_NAME"

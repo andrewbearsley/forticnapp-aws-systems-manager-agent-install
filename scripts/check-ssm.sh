@@ -99,6 +99,11 @@ check_specific_instances() {
         PLATFORM=$(echo "$INSTANCE_INFO" | awk '{print $2}')
         STATE=$(echo "$INSTANCE_INFO" | awk '{print $3}')
         
+        # Convert None platform to Linux for better display
+        if [ "$PLATFORM" = "None" ] || [ -z "$PLATFORM" ]; then
+            PLATFORM="Linux"
+        fi
+        
         # Check if instance is in SSM
         SSM_INFO=$(aws ssm describe-instance-information \
             --region "$AWS_REGION" \
@@ -172,6 +177,11 @@ show_instances_table() {
             
             INSTANCE_NAME=$(echo "$INSTANCE_INFO" | awk '{print $4}')
             PLATFORM=$(echo "$INSTANCE_INFO" | awk '{print $2}')
+            
+            # Convert None platform to Linux for better display
+            if [ "$PLATFORM" = "None" ] || [ -z "$PLATFORM" ]; then
+                PLATFORM="Linux"
+            fi
             
             # Check SSM status
             SSM_INFO=$(aws ssm describe-instance-information \
