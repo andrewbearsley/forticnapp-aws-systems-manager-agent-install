@@ -62,17 +62,26 @@ get_all_instances() {
 get_ssm_instances() {
     print_header "Finding instances managed by Systems Manager"
     
-    SSM_INSTANCES=$(aws ssm describe-instance-information \
+    # Get all SSM instances with their status
+    SSM_ALL_INSTANCES=$(aws ssm describe-instance-information \
         --region "$AWS_REGION" \
         --query 'InstanceInformationList[*].[InstanceId,ComputerName,PlatformType,PingStatus,LastPingDateTime]' \
-        --output text 2>/dev/null | awk '{print $1}' || true)
+        --output text 2>/dev/null || true)
     
-    if [ -z "$SSM_INSTANCES" ]; then
+    if [ -z "$SSM_ALL_INSTANCES" ]; then
         print_warning "No instances found in Systems Manager"
         SSM_INSTANCES=""
+        SSM_ONLINE_COUNT=0
     else
-        SSM_COUNT=$(echo "$SSM_INSTANCES" | wc -w)
-        print_status "Found $SSM_COUNT instances managed by Systems Manager"
+        # Count only online instances
+        SSM_ONLINE_INSTANCES=$(echo "$SSM_ALL_INSTANCES" | awk '$4 == "Online" {print $1}')
+        SSM_ONLINE_COUNT=$(echo "$SSM_ONLINE_INSTANCES" | wc -w)
+        SSM_TOTAL_COUNT=$(echo "$SSM_ALL_INSTANCES" | wc -l)
+        
+        print_status "Found $SSM_TOTAL_COUNT instances in Systems Manager ($SSM_ONLINE_COUNT online)"
+        
+        # Store all SSM instances for table display
+        SSM_INSTANCES=$(echo "$SSM_ALL_INSTANCES" | awk '{print $1}')
     fi
 }
 
@@ -140,10 +149,10 @@ show_summary() {
         print_status "Checked specific instances: $INSTANCE_IDS"
     else
         print_status "Total EC2 instances: $INSTANCE_COUNT"
-        print_status "SSM-managed instances: ${SSM_COUNT:-0}"
+        print_status "SSM-managed instances: ${SSM_ONLINE_COUNT:-0}"
         
         if [ "$INSTANCE_COUNT" -gt 0 ]; then
-            NOT_SSM_COUNT=$((INSTANCE_COUNT - ${SSM_COUNT:-0}))
+            NOT_SSM_COUNT=$((INSTANCE_COUNT - ${SSM_ONLINE_COUNT:-0}))
             print_status "Not SSM-managed: $NOT_SSM_COUNT"
         fi
     fi
