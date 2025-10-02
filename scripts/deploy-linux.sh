@@ -150,7 +150,7 @@ deploy_agents() {
         --region "$AWS_REGION" \
         --document-name "AWS-RunShellScript" \
         --instance-ids "${INSTANCE_ARRAY[@]}" \
-        --parameters "commands=[\"curl -sSL https://packages.lacework.net/install.sh | bash -s -- -t $AGENT_TOKEN\"]" \
+        --parameters "commands=[\"curl -sSL https://packages.lacework.net/install.sh | bash -s -- -t '$AGENT_TOKEN'\"]" \
         --query 'Command.CommandId' \
         --output text)
     
