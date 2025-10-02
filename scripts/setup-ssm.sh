@@ -125,7 +125,7 @@ install_ssm_agent() {
         INSTANCE_INFO=$(aws ec2 describe-instances \
             --region "$AWS_REGION" \
             --instance-ids "$instance_id" \
-            --query 'Reservations[*].Instances[*].[InstanceId,Platform,State.Name,Tags[?Key==`Name`].Value|[0]]' \
+            --query 'Reservations[*].Instances[*].[InstanceId,Platform,State.Name,Tags[?Key==`Name`].Value|[0],PublicIpAddress,KeyName]' \
             --output text 2>/dev/null || echo "NOT_FOUND")
         
         if [ "$INSTANCE_INFO" = "NOT_FOUND" ]; then
@@ -136,9 +136,12 @@ install_ssm_agent() {
         INSTANCE_NAME=$(echo "$INSTANCE_INFO" | awk '{print $4}')
         PLATFORM=$(echo "$INSTANCE_INFO" | awk '{print $2}')
         STATE=$(echo "$INSTANCE_INFO" | awk '{print $3}')
+        PUBLIC_IP=$(echo "$INSTANCE_INFO" | awk '{print $5}')
+        KEY_NAME=$(echo "$INSTANCE_INFO" | awk '{print $6}')
         
         print_status "Instance: $instance_id ($INSTANCE_NAME)"
         print_status "Platform: $PLATFORM, State: $STATE"
+        print_status "Public IP: $PUBLIC_IP, Key: $KEY_NAME"
         
         # Check if instance is already in SSM
         SSM_CHECK=$(aws ssm describe-instance-information \
@@ -152,24 +155,50 @@ install_ssm_agent() {
             continue
         fi
         
-        # Install SSM agent based on platform
-        if [ "$PLATFORM" = "windows" ]; then
-            install_ssm_windows "$instance_id"
+        # Try to install SSM agent via SSH if possible
+        if [ -n "$PUBLIC_IP" ] && [ -n "$KEY_NAME" ] && [ -f "${KEY_NAME}.pem" ]; then
+            print_status "Attempting SSH installation of SSM agent..."
+            install_ssm_via_ssh "$instance_id" "$PUBLIC_IP" "$KEY_NAME" "$PLATFORM"
         else
-            install_ssm_linux "$instance_id"
+            print_warning "Cannot install SSM agent automatically. Manual steps required:"
+            print_manual_instructions "$instance_id" "$PLATFORM"
         fi
     done
 }
 
-# Function to install SSM agent on Linux
-install_ssm_linux() {
+# Function to install SSM agent via SSH
+install_ssm_via_ssh() {
     local instance_id="$1"
-    print_status "Installing SSM agent on Linux instance: $instance_id"
+    local public_ip="$2"
+    local key_name="$3"
+    local platform="$4"
     
-    # Create user data script for SSM agent installation
-    cat > ssm-install-linux.sh << 'EOF'
+    print_status "Installing SSM agent via SSH on $instance_id ($public_ip)"
+    
+    # Create installation script
+    if [ "$platform" = "windows" ]; then
+        cat > ssm-install-ssh.ps1 << 'EOF'
+# Install SSM agent on Windows via SSH
+$SSMAgentUrl = "https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/windows_amd64/AmazonSSMAgentSetup.exe"
+$SSMAgentInstaller = "$env:TEMP\AmazonSSMAgentSetup.exe"
+
+try {
+    Invoke-WebRequest -Uri $SSMAgentUrl -OutFile $SSMAgentInstaller
+    Start-Process -FilePath $SSMAgentInstaller -ArgumentList "/S" -Wait
+    Write-Host "SSM Agent installed successfully"
+} catch {
+    Write-Error "Failed to install SSM Agent: $_"
+}
+EOF
+        
+        # Execute via SSH (if SSH is available on Windows)
+        print_warning "Windows SSH installation not supported. Use manual instructions below."
+        print_manual_instructions "$instance_id" "$platform"
+    else
+        # Linux installation via SSH
+        cat > ssm-install-ssh.sh << 'EOF'
 #!/bin/bash
-# Install SSM agent on Linux
+# Install SSM agent on Linux via SSH
 if command -v yum &> /dev/null; then
     # Amazon Linux, RHEL, CentOS
     yum update -y
@@ -193,55 +222,57 @@ systemctl enable amazon-ssm-agent
 systemctl start amazon-ssm-agent
 systemctl status amazon-ssm-agent
 EOF
-    
-    # Upload and execute the script
-    aws ssm send-command \
-        --region "$AWS_REGION" \
-        --document-name "AWS-RunShellScript" \
-        --instance-ids "$instance_id" \
-        --parameters "commands=[\"$(cat ssm-install-linux.sh | base64 -w 0 | base64 -d)\"]" \
-        --query 'Command.CommandId' \
-        --output text
-    
-    # Clean up
-    rm ssm-install-linux.sh
-    
-    print_status "SSM agent installation command sent to $instance_id"
+        
+        # Execute via SSH
+        print_status "Executing SSM installation via SSH..."
+        if ssh -i "${key_name}.pem" -o StrictHostKeyChecking=no ec2-user@"$public_ip" 'bash -s' < ssm-install-ssh.sh; then
+            print_status "SSM agent installation completed via SSH"
+        else
+            print_error "SSH installation failed. Use manual instructions below."
+            print_manual_instructions "$instance_id" "$platform"
+        fi
+        
+        # Clean up
+        rm ssm-install-ssh.sh
+    fi
 }
 
-# Function to install SSM agent on Windows
-install_ssm_windows() {
+# Function to print manual installation instructions
+print_manual_instructions() {
     local instance_id="$1"
-    print_status "Installing SSM agent on Windows instance: $instance_id"
+    local platform="$2"
     
-    # Create PowerShell script for SSM agent installation
-    cat > ssm-install-windows.ps1 << 'EOF'
-# Install SSM agent on Windows
-$SSMAgentUrl = "https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/windows_amd64/AmazonSSMAgentSetup.exe"
-$SSMAgentInstaller = "$env:TEMP\AmazonSSMAgentSetup.exe"
-
-try {
-    Invoke-WebRequest -Uri $SSMAgentUrl -OutFile $SSMAgentInstaller
-    Start-Process -FilePath $SSMAgentInstaller -ArgumentList "/S" -Wait
-    Write-Host "SSM Agent installed successfully"
-} catch {
-    Write-Error "Failed to install SSM Agent: $_"
-}
-EOF
+    print_header "Manual SSM Installation Instructions for $instance_id"
     
-    # Upload and execute the script
-    aws ssm send-command \
-        --region "$AWS_REGION" \
-        --document-name "AWS-RunPowerShellScript" \
-        --instance-ids "$instance_id" \
-        --parameters "commands=[\"$(cat ssm-install-windows.ps1 | base64 -w 0 | base64 -d)\"]" \
-        --query 'Command.CommandId' \
-        --output text
+    if [ "$platform" = "windows" ]; then
+        print_status "For Windows instance:"
+        print_status "1. Connect via RDP to the instance"
+        print_status "2. Download and install SSM agent:"
+        print_status "   https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/windows_amd64/AmazonSSMAgentSetup.exe"
+        print_status "3. Run the installer as Administrator"
+        print_status "4. The agent will start automatically"
+    else
+        print_status "For Linux instance:"
+        print_status "1. Connect via SSH to the instance"
+        print_status "2. Run the appropriate command for your distribution:"
+        print_status ""
+        print_status "   Amazon Linux/RHEL/CentOS:"
+        print_status "   sudo yum update -y && sudo yum install -y amazon-ssm-agent"
+        print_status ""
+        print_status "   Ubuntu/Debian:"
+        print_status "   sudo apt-get update && sudo snap install amazon-ssm-agent --classic"
+        print_status ""
+        print_status "   SUSE:"
+        print_status "   sudo zypper install -y amazon-ssm-agent"
+        print_status ""
+        print_status "3. Start and enable the service:"
+        print_status "   sudo systemctl enable amazon-ssm-agent"
+        print_status "   sudo systemctl start amazon-ssm-agent"
+    fi
     
-    # Clean up
-    rm ssm-install-windows.ps1
-    
-    print_status "SSM agent installation command sent to $instance_id"
+    print_status ""
+    print_status "After manual installation, wait 2-3 minutes for the agent to register with SSM."
+    print_status "Then run: cd scripts && ./check-ssm.sh"
 }
 
 # Function to attach IAM role to instances
