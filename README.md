@@ -29,10 +29,10 @@ git clone https://github.com/andrewbearsley/forticnapp-aws-systems-manager-agent
 cd forticnapp-aws-systems-manager-agent-install
 
 # Deploy Linux agents
-cd linux && ./deploy-linux.sh "your-agent-token-here"
+cd scripts && ./deploy-linux.sh "your-agent-token-here"
 
 # Deploy Windows agents  
-cd ../windows && ./deploy-windows.sh "your-agent-token-here"
+cd scripts && ./deploy-windows.sh "your-agent-token-here"
 ```
 
 ### Check if EC2 Instances are SSM-Ready
@@ -69,10 +69,10 @@ aws ssm send-command \
 ```bash
 # Use specific region
 export AWS_REGION="eu-west-1"
-./deploy-linux.sh "your-token"
+cd scripts && ./deploy-linux.sh "your-token"
 
 # Or specify inline
-AWS_REGION="ap-southeast-1" ./deploy-windows.sh "your-token"
+AWS_REGION="ap-southeast-1" cd scripts && ./deploy-windows.sh "your-token"
 ```
 
 ## Project Structure
@@ -83,10 +83,9 @@ forticnapp-aws-systems-manager/
 ├── QUICKSTART.md
 ├── WITHOUT-SSM.md              # Alternative deployment methods
 ├── LICENSE
-├── linux/
-│   └── deploy-linux.sh          # Simple Linux deployment script
-└── windows/
-    └── deploy-windows.sh       # Simple Windows deployment script
+└── scripts/
+    ├── deploy-linux.sh          # Linux deployment script
+    └── deploy-windows.sh       # Windows deployment script
 ```
 
 ## Quick Start
@@ -94,14 +93,14 @@ forticnapp-aws-systems-manager/
 ### Deploy Linux Agents
 
 ```bash
-cd linux
+cd scripts
 ./deploy-linux.sh "your-agent-token-here"
 ```
 
 ### Deploy Windows Agents
 
 ```bash
-cd windows
+cd scripts
 ./deploy-windows.sh "your-agent-token-here"
 ```
 
@@ -109,10 +108,10 @@ cd windows
 
 ```bash
 # Linux
-./deploy-linux.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
+cd scripts && ./deploy-linux.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
 
 # Windows
-./deploy-windows.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
+cd scripts && ./deploy-windows.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
 ```
 
 ## How It Works

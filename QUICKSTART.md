@@ -20,10 +20,10 @@ git clone https://github.com/andrewbearsley/forticnapp-aws-systems-manager-agent
 cd forticnapp-aws-systems-manager-agent-install
 
 # Deploy Linux agents
-cd linux && ./deploy-linux.sh "your-agent-token-here"
+cd scripts && ./deploy-linux.sh "your-agent-token-here"
 
 # Deploy Windows agents  
-cd ../windows && ./deploy-windows.sh "your-agent-token-here"
+cd scripts && ./deploy-windows.sh "your-agent-token-here"
 ```
 
 ### Check if EC2 Instances are SSM-Ready
@@ -56,8 +56,8 @@ cd forticnapp-aws-systems-manager-agent-install
 aws configure list
 
 # Deploy agents
-cd linux && ./deploy-linux.sh "your-agent-token-here"
-cd ../windows && ./deploy-windows.sh "your-agent-token-here"
+cd scripts && ./deploy-linux.sh "your-agent-token-here"
+cd scripts && ./deploy-windows.sh "your-agent-token-here"
 ```
 
 ## AWS Region Support
@@ -70,20 +70,20 @@ aws configure get region
 
 # Use specific region
 export AWS_REGION="eu-west-1"
-./deploy-linux.sh "your-token"
+cd scripts && ./deploy-linux.sh "your-token"
 
 # Or specify inline
-AWS_REGION="ap-southeast-1" ./deploy-windows.sh "your-token"
+AWS_REGION="ap-southeast-1" cd scripts && ./deploy-windows.sh "your-token"
 ```
 
 ## Deploy to Specific Instances
 
 ```bash
 # Linux - specific instances
-./deploy-linux.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
+cd scripts && ./deploy-linux.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
 
 # Windows - specific instances
-./deploy-windows.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
+cd scripts && ./deploy-windows.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
 ```
 
 ## What Happens
