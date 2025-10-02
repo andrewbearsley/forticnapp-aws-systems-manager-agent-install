@@ -4,7 +4,7 @@ Scripts to deploy FortiCNAPP agents on Linux and Windows EC2 instances using AWS
 
 ## Overview
 
-This solution uses the official FortiCNAPP installation methods:
+This solution uses the official FortiCNAPP agent installation methods:
 - **Linux**: Official `install.sh` script from [FortiCNAPP documentation](https://docs.fortinet.com/document/forticnapp/latest/administration-guide/538940/installing-using-the-install-sh-script)
 - **Windows**: Official `LWDatacollector.msi` and `config.json` from [Windows installation prerequisites](https://docs.fortinet.com/document/forticnapp/latest/administration-guide/902600/windows-agent-installation-prerequisites)
 
@@ -16,6 +16,8 @@ This solution uses the official FortiCNAPP installation methods:
 - FortiCNAPP agent token
 
 > **Note**: If your EC2 instances don't have AWS Systems Manager set up, see [WITHOUT-SSM.md](WITHOUT-SSM.md) for alternative deployment methods.
+> 
+> **Need to set up SSM?** See the [AWS Systems Manager setup guide](https://docs.aws.amazon.com/systems-manager/latest/userguide/setup.html) for EC2 instances.
 
 ## AWS CloudShell Usage
 

@@ -8,6 +8,8 @@ Simple deployment of FortiCNAPP agents using official installation methods and A
 2. **FortiCNAPP agent token** from your account
 3. **EC2 instances** with SSM agent installed and proper IAM roles
 
+> **Need to set up SSM?** See the [AWS Systems Manager setup guide](https://docs.aws.amazon.com/systems-manager/latest/userguide/setup.html) for EC2 instances.
+
 ## AWS CloudShell (Recommended)
 
 AWS CloudShell is pre-configured and ready to use:

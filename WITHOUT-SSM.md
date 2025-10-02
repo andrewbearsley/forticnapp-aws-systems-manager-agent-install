@@ -2,6 +2,8 @@
 
 If your EC2 instances don't have AWS Systems Manager (SSM) set up, you can still deploy FortiCNAPP agents using direct installation methods.
 
+> **💡 Tip**: For long-term management, consider setting up AWS Systems Manager using the [AWS Systems Manager setup guide](https://docs.aws.amazon.com/systems-manager/latest/userguide/setup.html).
+
 ## Prerequisites
 
 - SSH access to Linux instances
