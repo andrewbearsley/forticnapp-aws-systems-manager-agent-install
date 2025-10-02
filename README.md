@@ -27,43 +27,25 @@ cd forticnapp-aws-systems-manager-agent-install
 export AWS_REGION="your-aws-region"
 
 # Check SSM status for all instances
-./scripts/check-ssm.sh
+./scripts/check-ssm.sh # Check SSM status for all instances
+./scripts/check-ssm.sh instances.txt # Check SSM status for instances from file
+./scripts/check-ssm.sh "i-1234567890abcdef0 i-0987654321fedcba0" # Check SSM status for specific instances
 
 # [Optional] Setup SSM on all instances
-./scripts/setup-ssm.sh
-
-# [Optional] Setup SSM on specific instances
-./scripts/setup-ssm.sh "i-1234567890abcdef0"
-./scripts/setup-ssm.sh instances.txt
+./scripts/setup-ssm.sh # Setup SSM on all instances
+./scripts/setup-ssm.sh instances.txt # Setup SSM on instances from file
+./scripts/setup-ssm.sh "i-1234567890abcdef0" # Setup SSM on specific instances
 
 # Deploy Linux agents
-./scripts/deploy-linux.sh "your-agent-token-here"
+./scripts/deploy-linux.sh "your-agent-token-here" # Deploy Linux agents to all instances
+./scripts/deploy-linux.sh "your-agent-token-here" instances.txt # Deploy Linux agents to instances from file
+./scripts/deploy-linux.sh "your-agent-token-here" "i-1234567890abcdef0 i-0987654321fedcba0" # Deploy Linux agents to specific instances
 
 # Deploy Windows agents
-./scripts/deploy-windows.sh "your-agent-token-here"
+./scripts/deploy-windows.sh "your-agent-token-here" # Deploy Windows agents to all instances
+./scripts/deploy-windows.sh "your-agent-token-here" instances.txt # Deploy Windows agents to instances from file
+./scripts/deploy-windows.sh "your-agent-token-here" "i-1234567890abcdef0 i-0987654321fedcba0" # Deploy Windows agents to specific instances
 ```
-
-### Check if EC2 Instances are SSM-Ready
-
-Before deploying, verify your instances are managed by Systems Manager:
-
-```bash
-
-# Check specific instances
-./scripts/check-ssm.sh "i-1234567890abcdef0 i-0987654321fedcba0"
-
-# Check instances from file
-./scripts/check-ssm.sh instances.txt
-
-# Setup SSM on existing instances (if not ready)
-./scripts/setup-ssm.sh "i-1234567890abcdef0"
-./scripts/setup-ssm.sh instances.txt
-```
-
-**Expected output for SSM-ready instances:**
-- `PingStatus: Online` 
-- `LastPingDateTime: Recent timestamp`
-- `PlatformType: Linux` or `Windows`
 
 ### Local Environment
 
@@ -76,11 +58,13 @@ cd forticnapp-aws-systems-manager-agent-install
 
 # Ensure AWS CLI is configured
 aws configure list
-
-# Deploy agents
 export AWS_REGION="your-aws-region"
-./scripts/deploy-linux.sh "your-agent-token-here"
-./scripts/deploy-windows.sh "your-agent-token-here"
+
+# Deploy Linux agents
+./scripts/deploy-linux.sh "your-agent-token-here" "i-1234567890abcdef0 i-0987654321fedcba0"
+
+# Deploy Windows agents
+./scripts/deploy-windows.sh "your-agent-token-here" "i-1234567890abcdef0 i-0987654321fedcba0"
 ```
 
 ### Deploy to Specific Instances
