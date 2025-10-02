@@ -82,10 +82,10 @@ export AWS_REGION="your-aws-region"
 
 ```bash
 # Linux - specific instances
-cd scripts && ./deploy-linux.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
+./scripts/deploy-linux.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
 
 # Windows - specific instances
-cd scripts && ./deploy-windows.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
+./scripts/deploy-windows.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
 ```
 
 ## AWS Region Support
@@ -98,10 +98,10 @@ cd scripts && ./deploy-windows.sh "your-token" "i-1234567890abcdef0 i-0987654321
 ```bash
 # Use specific region
 export AWS_REGION="eu-west-1"
-cd scripts && ./deploy-linux.sh "your-token"
+./scripts/deploy-linux.sh "your-token"
 
 # Or specify inline
-AWS_REGION="ap-southeast-1" cd scripts && ./deploy-windows.sh "your-token"
+AWS_REGION="ap-southeast-1" ./scripts/deploy-windows.sh "your-token"
 ```
 
 ## Project Structure
@@ -337,14 +337,14 @@ For testing the deployment scripts, you can create test EC2 instances:
 cd test && ./create-test-instances.sh
 
 # Wait 2-3 minutes for SSM registration, then check
-cd ../scripts && ./check-ssm.sh
+./scripts/check-ssm.sh
 
 # Test deployment
-cd scripts && ./deploy-linux.sh "your-token"
-cd scripts && ./deploy-windows.sh "your-token"
+./scripts/deploy-linux.sh "your-token"
+./scripts/deploy-windows.sh "your-token"
 
 # Clean up when done (important to avoid charges!)
-cd ../test && ./cleanup-test-instances.sh
+cd test && ./cleanup-test-instances.sh
 ```
 
 **⚠️ Cost Warning**: Test instances incur AWS charges (~$0.05/hour). Always run cleanup when done!

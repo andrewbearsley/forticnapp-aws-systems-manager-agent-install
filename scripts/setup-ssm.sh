@@ -168,9 +168,9 @@ install_ssm_agent() {
         PUBLIC_IP=$(echo "$INSTANCE_INFO" | awk '{print $5}')
         KEY_NAME=$(echo "$INSTANCE_INFO" | awk '{print $6}')
         
-        # Convert None platform to Linux for better display
+        # Convert None platform to linux for better display
         if [ "$PLATFORM" = "None" ] || [ -z "$PLATFORM" ]; then
-            PLATFORM="Linux"
+            PLATFORM="linux"
         fi
         
         print_status "Instance: $instance_id ($INSTANCE_NAME)"
@@ -306,7 +306,7 @@ print_manual_instructions() {
     
     print_status ""
     print_status "After manual installation, wait 2-3 minutes for the agent to register with SSM."
-    print_status "Then run: cd scripts && ./check-ssm.sh"
+    print_status "Then run: ./scripts/check-ssm.sh"
 }
 
 # Function to attach IAM role to instances
@@ -419,10 +419,10 @@ show_next_steps() {
     print_header "Next Steps"
     
     print_status "SSM setup completed! You can now:"
-    print_status "1. Verify SSM status: cd scripts && ./check-ssm.sh"
+    print_status "1. Verify SSM status: ./scripts/check-ssm.sh"
     print_status "2. Deploy FortiCNAPP agents:"
-    print_status "   cd scripts && ./deploy-linux.sh 'your-token'"
-    print_status "   cd scripts && ./deploy-windows.sh 'your-token'"
+    print_status "   ./scripts/deploy-linux.sh 'your-token'"
+    print_status "   ./scripts/deploy-windows.sh 'your-token'"
     echo
     print_status "Instance IDs that were configured:"
     for instance_id in $INSTANCE_IDS; do
