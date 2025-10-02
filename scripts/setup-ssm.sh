@@ -70,7 +70,7 @@ create_ssm_role() {
     
     # Check if role exists
     if aws iam get-role --role-name "$ROLE_NAME" &> /dev/null; then
-        print_warning "IAM role $ROLE_NAME already exists"
+        print_status "IAM role $ROLE_NAME already exists"
     else
         # Create trust policy
         cat > trust-policy.json << EOF
@@ -143,6 +143,69 @@ configure_account_ssm_role() {
     fi
 }
 
+# Function to check if instances need configuration
+check_instances_status() {
+    print_header "Checking instance configuration status..."
+    
+    local instances_need_config=0
+    local instances_ready=0
+    
+    for instance_id in $INSTANCE_IDS; do
+        # Get instance details
+        INSTANCE_INFO=$(aws ec2 describe-instances \
+            --region "$AWS_REGION" \
+            --instance-ids "$instance_id" \
+            --query 'Reservations[*].Instances[*].[InstanceId,Platform,State.Name,Tags[?Key==`Name`].Value|[0],PublicIpAddress,KeyName]' \
+            --output text 2>/dev/null || echo "NOT_FOUND")
+        
+        if [ "$INSTANCE_INFO" = "NOT_FOUND" ]; then
+            print_error "Instance $instance_id not found or not accessible"
+            continue
+        fi
+        
+        INSTANCE_NAME=$(echo "$INSTANCE_INFO" | awk '{print $4}')
+        PLATFORM=$(echo "$INSTANCE_INFO" | awk '{print $2}')
+        STATE=$(echo "$INSTANCE_INFO" | awk '{print $3}')
+        
+        # Convert None platform to linux for better display
+        if [ "$PLATFORM" = "None" ] || [ -z "$PLATFORM" ]; then
+            PLATFORM="linux"
+        fi
+        
+        # Check SSM status
+        SSM_CHECK=$(aws ssm describe-instance-information \
+            --region "$AWS_REGION" \
+            --filters "Key=InstanceIds,Values=$instance_id" \
+            --query 'InstanceInformationList[*].PingStatus' \
+            --output text 2>/dev/null || echo "NotRegistered")
+        
+        # Check IAM role
+        CURRENT_ROLE=$(aws ec2 describe-instances \
+            --region "$AWS_REGION" \
+            --instance-ids "$instance_id" \
+            --query 'Reservations[*].Instances[*].IamInstanceProfile.Arn' \
+            --output text 2>/dev/null || echo "None")
+        
+        if [ "$SSM_CHECK" = "Online" ] && [ "$CURRENT_ROLE" != "None" ] && [ -n "$CURRENT_ROLE" ]; then
+            print_status "✅ $instance_id ($INSTANCE_NAME) - Already configured (SSM: Online, IAM: Attached)"
+            instances_ready=$((instances_ready + 1))
+        else
+            print_warning "⚠️ $instance_id ($INSTANCE_NAME) - Needs configuration (SSM: $SSM_CHECK, IAM: $([ "$CURRENT_ROLE" = "None" ] && echo "None" || echo "Attached"))"
+            instances_need_config=$((instances_need_config + 1))
+        fi
+    done
+    
+    print_status ""
+    print_status "Summary: $instances_ready instances ready, $instances_need_config instances need configuration"
+    
+    if [ $instances_need_config -eq 0 ]; then
+        print_status "All instances are already configured! No further action needed."
+        return 1  # Signal that no configuration is needed
+    fi
+    
+    return 0  # Signal that configuration is needed
+}
+
 # Function to install SSM agent on instances
 install_ssm_agent() {
     print_header "Installing SSM agent on instances..."
@@ -185,7 +248,7 @@ install_ssm_agent() {
             --output text 2>/dev/null || echo "NOT_IN_SSM")
         
         if [ "$SSM_CHECK" = "$instance_id" ]; then
-            print_warning "Instance $instance_id is already managed by SSM"
+            print_status "Instance $instance_id is already managed by SSM"
             continue
         fi
         
@@ -324,7 +387,7 @@ attach_iam_role() {
             --output text 2>/dev/null || echo "None")
         
         if [ "$CURRENT_ROLE" != "None" ] && [ -n "$CURRENT_ROLE" ]; then
-            print_warning "Instance $instance_id already has an IAM role: $CURRENT_ROLE"
+            print_status "Instance $instance_id already has an IAM role: $CURRENT_ROLE"
             continue
         fi
         
@@ -438,6 +501,15 @@ main() {
     
     check_prerequisites
     get_all_instances
+    
+    # Check if instances need configuration
+    if ! check_instances_status; then
+        print_header "SSM setup completed!"
+        print_status "All instances are already configured and ready for FortiCNAPP deployment."
+        show_next_steps
+        exit 0
+    fi
+    
     create_ssm_role
     install_ssm_agent
     attach_iam_role
