@@ -1,27 +1,24 @@
 # FortiCNAPP Agent Deployment with AWS Systems Manager
 
-Scripts to deploy FortiCNAPP agents on Linux and Windows EC2 instances using AWS Systems Manager.
+Deployment of FortiCNAPP agents for Windows and Linux EC2 instances using AWS Systems Manager.
 
-## Overview
+This solution uses the FortiCNAPP agent installation methods:
+- **Linux**: `install.sh` script from [FortiCNAPP docs - Linux Agent Installation](https://docs.fortinet.com/document/forticnapp/latest/administration-guide/538940/installing-using-the-install-sh-script)
+- **Windows**: `LWDatacollector.msi` and `config.json` from [FortiCNAPP docs - Windows Agent Installation](https://docs.fortinet.com/document/forticnapp/latest/administration-guide/902600/windows-agent-installation-prerequisites)
 
-This solution uses the official FortiCNAPP agent installation methods:
-- **Linux**: Official `install.sh` script from [FortiCNAPP documentation](https://docs.fortinet.com/document/forticnapp/latest/administration-guide/538940/installing-using-the-install-sh-script)
-- **Windows**: Official `LWDatacollector.msi` and `config.json` from [Windows installation prerequisites](https://docs.fortinet.com/document/forticnapp/latest/administration-guide/902600/windows-agent-installation-prerequisites)
+## Quick Start
 
-## Prerequisites
+### Prerequisites
 
-- AWS CLI configured with appropriate permissions
-- AWS Systems Manager (SSM) agent installed on target EC2 instances
-- EC2 instances with appropriate IAM roles for SSM access
-- FortiCNAPP agent token
+1. **AWS CLI configured** with appropriate permissions
+2. **FortiCNAPP agent token** from your FortiCNAPP account (FortiCNAPP Console > Settings > Agent Tokens)
+3. **EC2 instances** with SSM agent installed and proper IAM roles
 
-> **Note**: If your EC2 instances don't have AWS Systems Manager set up, see [WITHOUT-SSM.md](WITHOUT-SSM.md) for alternative deployment methods.
-> 
 > **Need to set up SSM?** See the [AWS Systems Manager setup guide](https://docs.aws.amazon.com/systems-manager/latest/userguide/setup.html) for EC2 instances.
 
-## AWS CloudShell Usage
+### AWS CloudShell (Recommended)
 
-AWS CloudShell is pre-configured with AWS CLI and works perfectly with these scripts:
+AWS CloudShell is pre-configured and ready to use:
 
 ```bash
 # Clone the repository
@@ -48,16 +45,66 @@ cd scripts && ./check-ssm.sh "i-1234567890abcdef0 i-0987654321fedcba0"
 
 # Setup SSM on existing instances (if not ready)
 cd scripts && ./setup-ssm.sh "i-1234567890abcdef0"
-
-# Manual check commands
-aws ssm describe-instance-information --query 'InstanceInformationList[*].[InstanceId,ComputerName,PlatformType,PingStatus]' --output table
-aws ssm describe-instance-information --filters "Key=InstanceIds,Values=i-1234567890abcdef0"
 ```
 
 **Expected output for SSM-ready instances:**
 - `PingStatus: Online` 
 - `LastPingDateTime: Recent timestamp`
 - `PlatformType: Linux` or `Windows`
+
+### Local Environment
+
+If running from your local machine:
+
+```bash
+# Clone the repository
+git clone https://github.com/andrewbearsley/forticnapp-aws-systems-manager-agent-install.git
+cd forticnapp-aws-systems-manager-agent-install
+
+# Ensure AWS CLI is configured
+aws configure list
+
+# Deploy agents
+cd scripts && ./deploy-linux.sh "your-agent-token-here"
+cd scripts && ./deploy-windows.sh "your-agent-token-here"
+```
+
+### AWS Region Support
+
+**Works with all AWS regions!** The scripts automatically:
+- Use your current AWS CLI region configuration
+- Fall back to `us-east-1` if no region is set
+- Allow override via `AWS_REGION` environment variable
+
+```bash
+# Use specific region
+export AWS_REGION="eu-west-1"
+cd scripts && ./deploy-linux.sh "your-token"
+
+# Or specify inline
+AWS_REGION="ap-southeast-1" cd scripts && ./deploy-windows.sh "your-token"
+```
+
+### Deploy to Specific Instances
+
+```bash
+# Linux - specific instances
+cd scripts && ./deploy-linux.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
+
+# Windows - specific instances
+cd scripts && ./deploy-windows.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
+```
+
+## Prerequisites
+
+- AWS CLI configured with appropriate permissions
+- AWS Systems Manager (SSM) agent installed on target EC2 instances
+- EC2 instances with appropriate IAM roles for SSM access
+- FortiCNAPP agent token
+
+> **Note**: If your EC2 instances don't have AWS Systems Manager set up, see [WITHOUT-SSM.md](WITHOUT-SSM.md) for alternative deployment methods.
+> 
+> **Need to set up SSM?** See the [AWS Systems Manager setup guide](https://docs.aws.amazon.com/systems-manager/latest/userguide/setup.html) for EC2 instances.
 
 ## AWS Region Support
 
@@ -120,6 +167,75 @@ cd scripts && ./deploy-linux.sh "your-token" "i-1234567890abcdef0 i-0987654321fe
 cd scripts && ./deploy-windows.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
 ```
 
+## What Happens
+
+### Linux Deployment
+1. Downloads official `install.sh` from FortiCNAPP
+2. Finds all Linux EC2 instances
+3. Runs installation via AWS Systems Manager with correct token syntax
+4. Monitors progress and verifies installation
+
+**Installation Command:**
+```bash
+curl -sSL https://packages.lacework.net/install.sh -o /tmp/install.sh && sudo bash /tmp/install.sh YOUR_TOKEN
+```
+
+### Windows Deployment
+1. Downloads official `LWDatacollector.msi` installer
+2. Creates `config.json` with your agent token
+3. Finds all Windows EC2 instances
+4. Runs installation via AWS Systems Manager PowerShell
+5. Monitors progress and verifies installation
+
+## Verification
+
+### Check Agent Status
+
+**Linux:**
+```bash
+aws ssm send-command \
+  --document-name "AWS-RunShellScript" \
+  --instance-ids "i-1234567890abcdef0" \
+  --parameters 'commands=["systemctl status datacollector"]'
+```
+
+**Windows:**
+```bash
+aws ssm send-command \
+  --document-name "AWS-RunPowerShellScript" \
+  --instance-ids "i-0987654321fedcba0" \
+  --parameters 'commands=["Get-Service -Name \"LaceworkAgent\""]'
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **SSM Agent Not Installed**
+   - Ensure SSM agent is installed and running
+   - Verify IAM roles have SSM permissions
+
+2. **Network Connectivity**
+   - Check security groups allow outbound HTTPS
+   - Verify instances can reach FortiCNAPP endpoints
+
+3. **Permission Issues**
+   - Ensure deployment user has SSM and EC2 permissions
+   - Verify FortiCNAPP token is valid
+
+### Useful Commands
+
+```bash
+# Check SSM agent status
+aws ssm describe-instance-information --filters "Key=InstanceIds,Values=i-1234567890abcdef0"
+
+# List recent commands
+aws ssm list-commands --max-items 10
+
+# Get command details
+aws ssm get-command-invocation --command-id "command-id" --instance-id "i-1234567890abcdef0"
+```
+
 ## How It Works
 
 ### Linux Deployment
@@ -155,49 +271,46 @@ The Windows script:
 - Windows Server 2019+
 - Windows Server 2022+
 
+## Project Structure
+
+```
+forticnapp-aws-systems-manager/
+├── scripts/
+│   ├── deploy-linux.sh          # Linux agent deployment
+│   ├── deploy-windows.sh        # Windows agent deployment
+│   ├── check-ssm.sh            # Check SSM readiness
+│   └── setup-ssm.sh            # Setup SSM on existing instances
+├── test/
+│   ├── create-test-instances.sh # Create test EC2 instances
+│   ├── cleanup-test-instances.sh # Cleanup test instances
+│   └── README.md               # Test environment documentation
+├── README.md                   # This file
+├── WITHOUT-SSM.md             # Alternative deployment methods
+└── .gitignore                 # Git ignore file
+```
+
 ## Environment Variables
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `AWS_REGION` | AWS region for deployment | us-east-1 |
 
-## Verification
-
-### Check Agent Status
+## Log Locations
 
 **Linux:**
-```bash
-aws ssm send-command \
-  --document-name "AWS-RunShellScript" \
-  --instance-ids "i-1234567890abcdef0" \
-  --parameters 'commands=["systemctl status lacework"]'
-```
+- Agent logs: `/var/log/lacework/`
+- Service status: `systemctl status datacollector`
+- SSM logs: `/var/log/amazon/ssm/`
 
 **Windows:**
-```bash
-aws ssm send-command \
-  --document-name "AWS-RunPowerShellScript" \
-  --instance-ids "i-0987654321fedcba0" \
-  --parameters 'commands=["Get-Service -Name \"LaceworkAgent\""]'
-```
+- Agent logs: `C:\ProgramData\Lacework\Logs\`
+- SSM logs: `C:\ProgramData\Amazon\SSM\Logs\`
 
-### Monitor Agent Logs
+## Documentation
 
-**Linux:**
-```bash
-aws ssm send-command \
-  --document-name "AWS-RunShellScript" \
-  --instance-ids "i-1234567890abcdef0" \
-  --parameters 'commands=["journalctl -u lacework -f"]'
-```
-
-**Windows:**
-```bash
-aws ssm send-command \
-  --document-name "AWS-RunPowerShellScript" \
-  --instance-ids "i-0987654321fedcba0" \
-  --parameters 'commands=["Get-WinEvent -FilterHashtable @{LogName=\"Application\"; ProviderName=\"LaceworkAgent\"} -MaxEvents 50"]'
-```
+- [FortiCNAPP Linux Installation](https://docs.fortinet.com/document/forticnapp/latest/administration-guide/538940/installing-using-the-install-sh-script)
+- [FortiCNAPP Windows Installation](https://docs.fortinet.com/document/forticnapp/latest/administration-guide/902600/windows-agent-installation-prerequisites)
+- [AWS Systems Manager Setup Guide](https://docs.aws.amazon.com/systems-manager/latest/userguide/setup.html)
 
 ## Testing
 
