@@ -112,6 +112,35 @@ EOF
         
         print_status "IAM role $ROLE_NAME created with SSM permissions"
     fi
+    
+    # Configure account-level SSM role
+    configure_account_ssm_role
+}
+
+# Function to configure account-level SSM role
+configure_account_ssm_role() {
+    print_header "Configuring account-level SSM role..."
+    
+    # Get account ID
+    ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+    
+    # Configure the account-level SSM role
+    SETTING_ID="arn:aws:ssm:${AWS_REGION}:${ACCOUNT_ID}:servicesetting/ssm/managed-instance/default-ec2-instance-management-role"
+    
+    print_status "Setting account-level SSM role to: $ROLE_NAME"
+    
+    if aws ssm update-service-setting \
+        --setting-id "$SETTING_ID" \
+        --setting-value "$ROLE_NAME" \
+        --region "$AWS_REGION" 2>/dev/null; then
+        print_status "Account-level SSM role configured successfully"
+    else
+        print_warning "Failed to configure account-level SSM role. You may need to do this manually:"
+        print_status "aws ssm update-service-setting \\"
+        print_status "  --setting-id $SETTING_ID \\"
+        print_status "  --setting-value $ROLE_NAME \\"
+        print_status "  --region $AWS_REGION"
+    fi
 }
 
 # Function to install SSM agent on instances
