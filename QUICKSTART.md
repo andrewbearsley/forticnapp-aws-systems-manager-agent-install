@@ -31,11 +31,11 @@ cd scripts && ./deploy-windows.sh "your-agent-token-here"
 Before deploying, verify your instances are managed by Systems Manager:
 
 ```bash
-# List all instances managed by SSM in current region
-aws ssm describe-instance-information --query 'InstanceInformationList[*].[InstanceId,ComputerName,PlatformType,PingStatus]' --output table
+# Check all instances in current region
+cd scripts && ./check-ssm.sh
 
-# Check specific instance
-aws ssm describe-instance-information --filters "Key=InstanceIds,Values=i-1234567890abcdef0"
+# Check specific instances
+cd scripts && ./check-ssm.sh "i-1234567890abcdef0 i-0987654321fedcba0"
 ```
 
 **Look for:**

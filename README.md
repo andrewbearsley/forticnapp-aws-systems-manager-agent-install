@@ -40,18 +40,15 @@ cd scripts && ./deploy-windows.sh "your-agent-token-here"
 Before deploying, verify your instances are managed by Systems Manager:
 
 ```bash
-# Check if specific instance is managed by SSM
-aws ssm describe-instance-information --filters "Key=InstanceIds,Values=i-1234567890abcdef0"
+# Check all instances in current region
+cd scripts && ./check-ssm.sh
 
-# List all instances managed by SSM in current region
+# Check specific instances
+cd scripts && ./check-ssm.sh "i-1234567890abcdef0 i-0987654321fedcba0"
+
+# Manual check commands
 aws ssm describe-instance-information --query 'InstanceInformationList[*].[InstanceId,ComputerName,PlatformType,PingStatus]' --output table
-
-# Check SSM agent status on a specific instance (if accessible)
-aws ssm send-command \
-  --document-name "AWS-RunShellScript" \
-  --instance-ids "i-1234567890abcdef0" \
-  --parameters 'commands=["systemctl status amazon-ssm-agent"]' \
-  --query 'Command.CommandId' --output text
+aws ssm describe-instance-information --filters "Key=InstanceIds,Values=i-1234567890abcdef0"
 ```
 
 **Expected output for SSM-ready instances:**
@@ -84,6 +81,7 @@ forticnapp-aws-systems-manager/
 ├── WITHOUT-SSM.md              # Alternative deployment methods
 ├── LICENSE
 └── scripts/
+    ├── check-ssm.sh            # Check SSM readiness
     ├── deploy-linux.sh          # Linux deployment script
     └── deploy-windows.sh       # Windows deployment script
 ```
