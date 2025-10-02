@@ -18,6 +18,35 @@ print_warning() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 print_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 print_header() { echo -e "${BLUE}[HEADER]${NC} $1"; }
 
+# Function to prompt for confirmation
+confirm_deployment() {
+    echo
+    print_header "Deployment Summary"
+    print_status "AWS Region: $AWS_REGION"
+    print_status "Agent Token: ${AGENT_TOKEN:0:10}..."
+    print_status "Target Instances: $INSTANCE_COUNT Windows instances"
+    echo
+    print_status "Target instances:"
+    echo "$INSTANCES" | while read -r instance_id; do
+        instance_name=$(aws ec2 describe-instances \
+            --region "$AWS_REGION" \
+            --instance-ids "$instance_id" \
+            --query 'Reservations[*].Instances[*].Tags[?Key==`Name`].Value|[0]' \
+            --output text 2>/dev/null || echo "Unknown")
+        echo "  - $instance_id ($instance_name)"
+    done
+    echo
+    print_warning "This will install FortiCNAPP agents on the above instances."
+    print_warning "Existing agents will be stopped and reinstalled if present."
+    echo
+    read -p "Do you want to proceed? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_status "Deployment cancelled by user."
+        exit 0
+    fi
+}
+
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MSI_URL="https://packages.lacework.net/windows/lacework-agent.msi"
@@ -315,12 +344,11 @@ verify_installation() {
 # Main execution
 main() {
     print_header "FortiCNAPP Windows Agent Deployment"
-    print_status "Region: $AWS_REGION"
-    print_status "Agent Token: ${AGENT_TOKEN:0:10}..."
     
     check_prerequisites
     download_windows_files
     get_windows_instances
+    confirm_deployment
     deploy_agents
     verify_installation
     
