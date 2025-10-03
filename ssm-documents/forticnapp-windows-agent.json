@@ -1,0 +1,237 @@
+{
+  "schemaVersion": "2.2",
+  "description": "Deploy FortiCNAPP agent to Windows EC2 instances",
+  "parameters": {
+    "AgentToken": {
+      "type": "String",
+      "description": "FortiCNAPP agent token",
+      "default": ""
+    },
+    "DownloadUrl": {
+      "type": "String",
+      "description": "URL to download LWDatacollector.msi",
+      "default": "https://packages.lacework.net/windows/installer/LWDatacollector.msi"
+    },
+    "InstallPath": {
+      "type": "String",
+      "description": "Path to download the MSI installer",
+      "default": "C:\\temp\\LWDatacollector.msi"
+    },
+    "ConfigPath": {
+      "type": "String",
+      "description": "Path to create the config.json file",
+      "default": "C:\\temp\\config.json"
+    }
+  },
+  "mainSteps": [
+    {
+      "action": "aws:downloadContent",
+      "name": "downloadWindowsInstaller",
+      "inputs": {
+        "sourceType": "HTTP",
+        "sourceInfo": "{\"url\":\"{{ DownloadUrl }}\"}",
+        "destinationPath": "{{ InstallPath }}"
+      },
+      "onFailure": "Abort"
+    },
+    {
+      "action": "aws:runPowerShellScript",
+      "name": "createConfigFile",
+      "inputs": {
+        "runCommand": [
+          "# Create config.json with agent token",
+          "$config = @{",
+          "    token = '{{ AgentToken }}'",
+          "} | ConvertTo-Json",
+          "",
+          "# Create temp directory if it doesn't exist",
+          "if (!(Test-Path 'C:\\temp')) {",
+          "    New-Item -ItemType Directory -Path 'C:\\temp' -Force",
+          "}",
+          "",
+          "# Write config file",
+          "$config | Out-File -FilePath '{{ ConfigPath }}' -Encoding UTF8",
+          "",
+          "Write-Host 'Config file created successfully'",
+          "Get-Content '{{ ConfigPath }}'"
+        ]
+      },
+      "onFailure": "Abort"
+    },
+    {
+      "action": "aws:runPowerShellScript",
+      "name": "stopExistingAgent",
+      "inputs": {
+        "runCommand": [
+          "# Stop existing LaceworkAgent service if running",
+          "try {",
+          "    $service = Get-Service -Name 'LaceworkAgent' -ErrorAction SilentlyContinue",
+          "    if ($service -and $service.Status -eq 'Running') {",
+          "        Write-Host 'Stopping existing LaceworkAgent service...'",
+          "        Stop-Service -Name 'LaceworkAgent' -Force",
+          "        Start-Sleep -Seconds 5",
+          "    }",
+          "} catch {",
+          "    Write-Host 'No existing LaceworkAgent service found or already stopped'",
+          "}"
+        ]
+      },
+      "onFailure": "Continue"
+    },
+    {
+      "action": "aws:runPowerShellScript",
+      "name": "installFortiCNAPPAgent",
+      "inputs": {
+        "runCommand": [
+          "# Install FortiCNAPP agent",
+          "Write-Host 'Installing FortiCNAPP agent...'",
+          "",
+          "try {",
+          "    # Run MSI installer silently",
+          "    $process = Start-Process -FilePath 'msiexec.exe' -ArgumentList '/i', '{{ InstallPath }}', '/quiet', '/norestart' -Wait -PassThru",
+          "    ",
+          "    if ($process.ExitCode -eq 0) {",
+          "        Write-Host 'FortiCNAPP agent installed successfully'",
+          "    } else {",
+          "        Write-Error \"Installation failed with exit code: $($process.ExitCode)\"",
+          "        exit $process.ExitCode",
+          "    }",
+          "} catch {",
+          "    Write-Error \"Installation failed: $($_.Exception.Message)\"",
+          "    exit 1",
+          "}"
+        ]
+      },
+      "onFailure": "Abort"
+    },
+    {
+      "action": "aws:runPowerShellScript",
+      "name": "copyConfigFile",
+      "inputs": {
+        "runCommand": [
+          "# Copy config file to Lacework directory",
+          "Write-Host 'Copying config file...'",
+          "",
+          "try {",
+          "    $laceworkDir = 'C:\\ProgramData\\Lacework'",
+          "    ",
+          "    # Create Lacework directory if it doesn't exist",
+          "    if (!(Test-Path $laceworkDir)) {",
+          "        New-Item -ItemType Directory -Path $laceworkDir -Force",
+          "    }",
+          "    ",
+          "    # Copy config file",
+          "    Copy-Item -Path '{{ ConfigPath }}' -Destination \"$laceworkDir\\config.json\" -Force",
+          "    ",
+          "    Write-Host 'Config file copied successfully'",
+          "} catch {",
+          "    Write-Error \"Failed to copy config file: $($_.Exception.Message)\"",
+          "    exit 1",
+          "}"
+        ]
+      },
+      "onFailure": "Abort"
+    },
+    {
+      "action": "aws:runPowerShellScript",
+      "name": "startAgentService",
+      "inputs": {
+        "runCommand": [
+          "# Start LaceworkAgent service",
+          "Write-Host 'Starting LaceworkAgent service...'",
+          "",
+          "try {",
+          "    Start-Service -Name 'LaceworkAgent'",
+          "    Start-Sleep -Seconds 10",
+          "    ",
+          "    $service = Get-Service -Name 'LaceworkAgent'",
+          "    if ($service.Status -eq 'Running') {",
+          "        Write-Host 'SUCCESS: LaceworkAgent service is running'",
+          "    } else {",
+          "        Write-Error 'LaceworkAgent service failed to start'",
+          "        exit 1",
+          "    }",
+          "} catch {",
+          "    Write-Error \"Failed to start service: $($_.Exception.Message)\"",
+          "    exit 1",
+          "}"
+        ]
+      },
+      "onFailure": "Abort"
+    },
+    {
+      "action": "aws:runPowerShellScript",
+      "name": "verifyInstallation",
+      "inputs": {
+        "runCommand": [
+          "# Verify installation",
+          "Write-Host 'Verifying FortiCNAPP agent installation...'",
+          "",
+          "try {",
+          "    $service = Get-Service -Name 'LaceworkAgent'",
+          "    Write-Host \"Service Status: $($service.Status)\"",
+          "    ",
+          "    if ($service.Status -eq 'Running') {",
+          "        Write-Host 'SUCCESS: FortiCNAPP agent is running'",
+          "        ",
+          "        # Check if config file exists",
+          "        $configFile = 'C:\\ProgramData\\Lacework\\config.json'",
+          "        if (Test-Path $configFile) {",
+          "            Write-Host 'Config file found'",
+          "            Get-Content $configFile",
+          "        } else {",
+          "            Write-Warning 'Config file not found'",
+          "        }",
+          "        ",
+          "        # Show recent logs",
+          "        Write-Host 'Recent application logs:'",
+          "        Get-WinEvent -FilterHashtable @{LogName='Application'; ProviderName='LaceworkAgent'} -MaxEvents 5 -ErrorAction SilentlyContinue",
+          "    } else {",
+          "        Write-Error 'FortiCNAPP agent is not running'",
+          "        exit 1",
+          "    }",
+          "} catch {",
+          "    Write-Error \"Verification failed: $($_.Exception.Message)\"",
+          "    exit 1",
+          "}"
+        ]
+      },
+      "onFailure": "Continue"
+    },
+    {
+      "action": "aws:runPowerShellScript",
+      "name": "cleanup",
+      "inputs": {
+        "runCommand": [
+          "# Clean up downloaded files",
+          "Write-Host 'Cleaning up temporary files...'",
+          "",
+          "try {",
+          "    if (Test-Path '{{ InstallPath }}') {",
+          "        Remove-Item -Path '{{ InstallPath }}' -Force",
+          "        Write-Host 'MSI installer removed'",
+          "    }",
+          "    ",
+          "    if (Test-Path '{{ ConfigPath }}') {",
+          "        Remove-Item -Path '{{ ConfigPath }}' -Force",
+          "        Write-Host 'Temporary config file removed'",
+          "    }",
+          "} catch {",
+          "    Write-Warning \"Cleanup failed: $($_.Exception.Message)\"",
+          "}"
+        ]
+      },
+      "onFailure": "Continue"
+    }
+  ],
+  "outputs": [
+    "downloadWindowsInstaller.Output",
+    "createConfigFile.Output",
+    "stopExistingAgent.Output",
+    "installFortiCNAPPAgent.Output",
+    "copyConfigFile.Output",
+    "startAgentService.Output",
+    "verifyInstallation.Output",
+    "cleanup.Output"
+  ]
+}

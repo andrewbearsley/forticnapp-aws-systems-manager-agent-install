@@ -105,7 +105,12 @@ forticnapp-aws-systems-manager/
 │   ├── deploy-linux.sh          # Linux agent deployment
 │   ├── deploy-windows.sh        # Windows agent deployment
 │   ├── check-ssm.sh            # Check SSM readiness
-│   └── setup-ssm.sh            # Setup SSM on existing instances
+│   ├── setup-ssm.sh            # Setup SSM on existing instances
+│   └── deploy-via-ssm-doc.sh   # Deploy via SSM documents with targeting
+├── ssm-documents/
+│   ├── forticnapp-linux-agent.json    # SSM document for Linux deployment
+│   ├── forticnapp-windows-agent.json  # SSM document for Windows deployment
+│   └── README.md                      # SSM documents documentation
 ├── instances.txt.example       # Example instance list file format
 ├── README.md                   # This file
 ├── WITHOUT-SSM.md             # Alternative deployment methods
@@ -216,6 +221,33 @@ The Windows script:
 - Windows Server 2019+
 - Windows Server 2022+
 
+### Deploy via SSM Documents (Advanced)
+
+For customers who want to use SSM documents with advanced targeting options:
+
+```bash
+# Deploy to instances by tag
+./scripts/deploy-via-ssm-doc.sh "your-token" tag "Environment=Production"
+
+# Deploy to specific instances
+./scripts/deploy-via-ssm-doc.sh "your-token" instance-ids "i-1234567890abcdef0 i-0987654321fedcba0"
+
+# Deploy to instances from file
+./scripts/deploy-via-ssm-doc.sh "your-token" file instances.txt
+
+# Deploy to all running instances
+./scripts/deploy-via-ssm-doc.sh "your-token" all
+```
+
+**Benefits of SSM Document Approach:**
+- **Reusable**: Create once, use many times
+- **Targeted**: Support for tags, resource groups, and custom targeting
+- **Auditable**: All executions logged in AWS Systems Manager
+- **Versioned**: Document versioning and rollback capabilities
+- **Integrated**: Works with AWS Config, CloudTrail, and other AWS services
+
+See `ssm-documents/README.md` for detailed documentation.
+
 ## Project Structure
 
 ```
@@ -224,7 +256,12 @@ forticnapp-aws-systems-manager/
 │   ├── deploy-linux.sh          # Linux agent deployment
 │   ├── deploy-windows.sh        # Windows agent deployment
 │   ├── check-ssm.sh            # Check SSM readiness
-│   └── setup-ssm.sh            # Setup SSM on existing instances
+│   ├── setup-ssm.sh            # Setup SSM on existing instances
+│   └── deploy-via-ssm-doc.sh   # Deploy via SSM documents with targeting
+├── ssm-documents/
+│   ├── forticnapp-linux-agent.json    # SSM document for Linux deployment
+│   ├── forticnapp-windows-agent.json  # SSM document for Windows deployment
+│   └── README.md                      # SSM documents documentation
 ├── instances.txt.example       # Example instance list file format
 ├── README.md                   # This file
 ├── WITHOUT-SSM.md             # Alternative deployment methods

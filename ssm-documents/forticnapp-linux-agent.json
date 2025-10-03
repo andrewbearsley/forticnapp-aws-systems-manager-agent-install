@@ -1,0 +1,95 @@
+{
+  "schemaVersion": "2.2",
+  "description": "Deploy FortiCNAPP agent to Linux EC2 instances",
+  "parameters": {
+    "AgentToken": {
+      "type": "String",
+      "description": "FortiCNAPP agent token",
+      "default": ""
+    },
+    "DownloadUrl": {
+      "type": "String",
+      "description": "URL to download FortiCNAPP install.sh script",
+      "default": "https://packages.lacework.net/install.sh"
+    },
+    "InstallPath": {
+      "type": "String",
+      "description": "Path to download and run the install script",
+      "default": "/tmp/install.sh"
+    }
+  },
+  "mainSteps": [
+    {
+      "action": "aws:downloadContent",
+      "name": "downloadInstallScript",
+      "inputs": {
+        "sourceType": "HTTP",
+        "sourceInfo": "{\"url\":\"{{ DownloadUrl }}\"}",
+        "destinationPath": "{{ InstallPath }}"
+      },
+      "onFailure": "Abort"
+    },
+    {
+      "action": "aws:runShellScript",
+      "name": "installFortiCNAPPAgent",
+      "inputs": {
+        "runCommand": [
+          "#!/bin/bash",
+          "set -e",
+          "",
+          "# Make script executable",
+          "chmod +x {{ InstallPath }}",
+          "",
+          "# Install FortiCNAPP agent",
+          "sudo bash {{ InstallPath }} {{ AgentToken }}",
+          "",
+          "# Wait for service to start",
+          "sleep 10",
+          "",
+          "# Check if service is running",
+          "if systemctl is-active --quiet datacollector; then",
+          "    echo 'FortiCNAPP agent installed and running successfully'",
+          "    systemctl status datacollector --no-pager",
+          "else",
+          "    echo 'ERROR: FortiCNAPP agent failed to start'",
+          "    systemctl status datacollector --no-pager",
+          "    exit 1",
+          "fi",
+          "",
+          "# Clean up downloaded script",
+          "rm -f {{ InstallPath }}"
+        ]
+      },
+      "onFailure": "Abort"
+    },
+    {
+      "action": "aws:runShellScript",
+      "name": "verifyInstallation",
+      "inputs": {
+        "runCommand": [
+          "#!/bin/bash",
+          "",
+          "# Verify agent is running",
+          "if systemctl is-active --quiet datacollector; then",
+          "    echo 'SUCCESS: FortiCNAPP agent is running'",
+          "    echo 'Service status:'",
+          "    systemctl status datacollector --no-pager",
+          "    echo ''",
+          "    echo 'Recent logs:'",
+          "    journalctl -u datacollector --no-pager -n 10",
+          "else",
+          "    echo 'ERROR: FortiCNAPP agent is not running'",
+          "    systemctl status datacollector --no-pager",
+          "    exit 1",
+          "fi"
+        ]
+      },
+      "onFailure": "Continue"
+    }
+  ],
+  "outputs": [
+    "downloadInstallScript.Output",
+    "installFortiCNAPPAgent.Output",
+    "verifyInstallation.Output"
+  ]
+}
