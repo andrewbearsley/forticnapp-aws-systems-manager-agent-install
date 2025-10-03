@@ -25,82 +25,54 @@ cd forticnapp-aws-systems-manager-agent-install
 
 # Set AWS region
 export AWS_REGION="your-aws-region"
+```
 
-# Check SSM status for all instances
+### Check SSM status for EC2 instances
+
+```bash
 ./scripts/check-ssm.sh # Check SSM status for all instances
 ./scripts/check-ssm.sh instances.txt # Check SSM status for instances from file
 ./scripts/check-ssm.sh "i-1234567890abcdef0 i-0987654321fedcba0" # Check SSM status for specific instances
+```
 
-# [Optional] Setup SSM on all instances
+### [Optional] Setup SSM for EC2 instances
+
+```bash
 ./scripts/setup-ssm.sh # Setup SSM on all instances
 ./scripts/setup-ssm.sh instances.txt # Setup SSM on instances from file
 ./scripts/setup-ssm.sh "i-1234567890abcdef0" # Setup SSM on specific instances
+```
 
-# Deploy Linux agents
+### Deploy FortiCNAPP agents to EC2 Linux instances
+
+```bash
 ./scripts/deploy-linux.sh "your-agent-token-here" # Deploy Linux agents to all instances
 ./scripts/deploy-linux.sh "your-agent-token-here" instances.txt # Deploy Linux agents to instances from file
 ./scripts/deploy-linux.sh "your-agent-token-here" "i-1234567890abcdef0 i-0987654321fedcba0" # Deploy Linux agents to specific instances
+```
 
-# Deploy Windows agents
+### Deploy FortiCNAPP agents to EC2 Windows instances
+
+```bash
 ./scripts/deploy-windows.sh "your-agent-token-here" # Deploy Windows agents to all instances
 ./scripts/deploy-windows.sh "your-agent-token-here" instances.txt # Deploy Windows agents to instances from file
-./scripts/deploy-windows.sh "your-agent-token-here" "i-1234567890abcdef0 i-0987654321fedcba0" # Deploy Windows agents to specific instances
-```
-
-### Local Environment
-
-If running from your local machine:
-
-```bash
-# Clone the repository
-git clone https://github.com/andrewbearsley/forticnapp-aws-systems-manager-agent-install.git
-cd forticnapp-aws-systems-manager-agent-install
-
-# Ensure AWS CLI is configured
-aws configure list
-export AWS_REGION="your-aws-region"
-
-# Deploy Linux agents
-./scripts/deploy-linux.sh "your-agent-token-here" "i-1234567890abcdef0 i-0987654321fedcba0"
-
-# Deploy Windows agents
-./scripts/deploy-windows.sh "your-agent-token-here" "i-1234567890abcdef0 i-0987654321fedcba0"
-```
-
-### Deploy to Specific Instances
-
-```bash
-# Linux - specific instances
-./scripts/deploy-linux.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
-
-# Windows - specific instances
-./scripts/deploy-windows.sh "your-token" "i-1234567890abcdef0 i-0987654321fedcba0"
-
-# Using instance list file
-./scripts/deploy-linux.sh "your-token" instances.txt
-./scripts/deploy-windows.sh "your-token" instances.txt
+./scripts/deploy-windows.sh "your-agent-token-here" "i-1234567890abcdef0 i-0987654321fedcba0" # Deploy to specific instances
 ```
 
 ### Instance List Files
 
 For managing large numbers of instances, you can create a file with instance IDs:
 
-```bash
-# Create instance list file
-cat > instances.txt << EOF
-# Production Linux servers
+Example:
+
+```
+# Linux servers
 i-1234567890abcdef0
 i-0987654321fedcba0
 
-# Production Windows servers
+# Windows servers
 i-abcdef1234567890
 i-fedcba0987654321
-EOF
-
-# Use with any script
-./scripts/setup-ssm.sh instances.txt
-./scripts/deploy-linux.sh "your-token" instances.txt
-./scripts/check-ssm.sh instances.txt
 ```
 
 **File format:**
@@ -109,9 +81,9 @@ EOF
 - Empty lines are ignored
 - See `instances.txt.example` for reference
 
-## AWS Region Support
+### AWS Region Support
 
-**Works with all AWS regions!** The scripts automatically:
+**Works with all AWS regions** The scripts automatically:
 - Use your current AWS CLI region configuration
 - Fall back to `us-east-1` if no region is set
 - Allow override via `AWS_REGION` environment variable
@@ -134,10 +106,6 @@ forticnapp-aws-systems-manager/
 │   ├── deploy-windows.sh        # Windows agent deployment
 │   ├── check-ssm.sh            # Check SSM readiness
 │   └── setup-ssm.sh            # Setup SSM on existing instances
-├── test/
-│   ├── create-test-instances.sh # Create test EC2 instances
-│   ├── cleanup-test-instances.sh # Cleanup test instances
-│   └── README.md               # Test environment documentation
 ├── instances.txt.example       # Example instance list file format
 ├── README.md                   # This file
 ├── WITHOUT-SSM.md             # Alternative deployment methods
@@ -149,7 +117,7 @@ forticnapp-aws-systems-manager/
 ### Linux Deployment
 1. Downloads official `install.sh` from FortiCNAPP
 2. Finds all Linux EC2 instances
-3. Runs installation via AWS Systems Manager with correct token syntax
+3. Runs installation via AWS Systems Manager
 4. Monitors progress and verifies installation
 
 **Installation Command:**
@@ -257,10 +225,6 @@ forticnapp-aws-systems-manager/
 │   ├── deploy-windows.sh        # Windows agent deployment
 │   ├── check-ssm.sh            # Check SSM readiness
 │   └── setup-ssm.sh            # Setup SSM on existing instances
-├── test/
-│   ├── create-test-instances.sh # Create test EC2 instances
-│   ├── cleanup-test-instances.sh # Cleanup test instances
-│   └── README.md               # Test environment documentation
 ├── instances.txt.example       # Example instance list file format
 ├── README.md                   # This file
 ├── WITHOUT-SSM.md             # Alternative deployment methods
@@ -351,57 +315,6 @@ aws ssm get-command-invocation --command-id "command-id" --instance-id "i-123456
 - [FortiCNAPP Windows Installation](https://docs.fortinet.com/document/forticnapp/latest/administration-guide/902600/windows-agent-installation-prerequisites)
 - [AWS Systems Manager Setup Guide](https://docs.aws.amazon.com/systems-manager/latest/userguide/setup.html)
 
-## Testing
-
-For testing the deployment scripts, you can create test EC2 instances:
-
-```bash
-# Create test instances (Linux + Windows with SSM)
-cd test && ./create-test-instances.sh
-
-# Wait 2-3 minutes for SSM registration, then check
-./scripts/check-ssm.sh
-
-# Test deployment
-./scripts/deploy-linux.sh "your-token"
-./scripts/deploy-windows.sh "your-token"
-
-# Test with specific instances
-./scripts/deploy-linux.sh "your-token" "i-test123 i-test456"
-./scripts/deploy-windows.sh "your-token" "i-test789"
-
-# Clean up when done (important to avoid charges!)
-cd test && ./cleanup-test-instances.sh
-```
-
-**⚠️ Cost Warning**: Test instances incur AWS charges (~$0.05/hour). Always run cleanup when done!
-
-## Troubleshooting
-
-### Common Issues
-
-1. **SSM Agent Not Installed**
-   - Ensure SSM agent is installed and running on target instances
-   - Verify IAM roles have necessary SSM permissions
-
-2. **Network Connectivity**
-   - Check security groups allow outbound HTTPS traffic
-   - Verify instances can reach FortiCNAPP endpoints
-
-3. **Permission Issues**
-   - Ensure deployment user has SSM and EC2 permissions
-   - Verify FortiCNAPP token is valid and not expired
-
-### Log Locations
-
-**Linux:**
-- Agent logs: `/var/log/lacework/`
-- Service status: `systemctl status datacollector`
-- SSM logs: `/var/log/amazon/ssm/`
-
-**Windows:**
-- Agent logs: `C:\ProgramData\Lacework\Logs\`
-- SSM logs: `C:\ProgramData\Amazon\SSM\Logs\`
 
 ## Support and Documentation
 
