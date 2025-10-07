@@ -59,6 +59,28 @@ export AWS_REGION="your-aws-region"
 ./scripts/deploy-windows.sh "your-agent-token-here" "i-1234567890abcdef0 i-0987654321fedcba0" # Deploy to specific instances
 ```
 
+## Removing FortiCNAPP Agents
+
+### Remove from Linux instances
+
+```bash
+./scripts/remove-linux.sh # Remove from all Linux instances
+./scripts/remove-linux.sh instances.txt # Remove from instances in file
+./scripts/remove-linux.sh "i-1234567890abcdef0 i-0987654321fedcba0" # Remove from specific instances
+```
+
+### Remove from Windows instances
+
+```bash
+./scripts/remove-windows.sh # Remove from all Windows instances
+./scripts/remove-windows.sh instances.txt # Remove from instances in file
+./scripts/remove-windows.sh "i-1234567890abcdef0 i-0987654321fedcba0" # Remove from specific instances
+```
+
+**What gets removed:**
+- **Linux**: Stops service, removes packages (apt/yum/rpm), deletes directories (`/var/lib/lacework`, `/var/log/lacework`, `/etc/lacework`), removes systemd service files
+- **Windows**: Stops service, uninstalls MSI, removes directories (`C:\Program Files\Lacework`, `C:\ProgramData\Lacework`)
+
 ### Instance List Files
 
 For managing large numbers of instances, you can create a file with instance IDs:
@@ -104,13 +126,17 @@ forticnapp-aws-systems-manager/
 ├── scripts/
 │   ├── deploy-linux.sh          # Linux agent deployment
 │   ├── deploy-windows.sh        # Windows agent deployment
+│   ├── remove-linux.sh          # Linux agent removal
+│   ├── remove-windows.sh        # Windows agent removal
 │   ├── check-ssm.sh            # Check SSM readiness
 │   ├── setup-ssm.sh            # Setup SSM on existing instances
 │   └── deploy-via-ssm-doc.sh   # Deploy via SSM documents with targeting
 ├── ssm-documents/
-│   ├── forticnapp-linux-agent.json    # SSM document for Linux deployment
-│   ├── forticnapp-windows-agent.json  # SSM document for Windows deployment
-│   └── README.md                      # SSM documents documentation
+│   ├── forticnapp-linux-agent.json       # SSM document for Linux deployment
+│   ├── forticnapp-windows-agent.json     # SSM document for Windows deployment
+│   ├── forticnapp-linux-remove.json      # SSM document for Linux removal
+│   ├── forticnapp-windows-remove.json    # SSM document for Windows removal
+│   └── README.md                         # SSM documents documentation
 ├── instances.txt.example       # Example instance list file format
 ├── README.md                   # This file
 ├── WITHOUT-SSM.md             # Alternative deployment methods
@@ -255,13 +281,17 @@ forticnapp-aws-systems-manager/
 ├── scripts/
 │   ├── deploy-linux.sh          # Linux agent deployment
 │   ├── deploy-windows.sh        # Windows agent deployment
+│   ├── remove-linux.sh          # Linux agent removal
+│   ├── remove-windows.sh        # Windows agent removal
 │   ├── check-ssm.sh            # Check SSM readiness
 │   ├── setup-ssm.sh            # Setup SSM on existing instances
 │   └── deploy-via-ssm-doc.sh   # Deploy via SSM documents with targeting
 ├── ssm-documents/
-│   ├── forticnapp-linux-agent.json    # SSM document for Linux deployment
-│   ├── forticnapp-windows-agent.json  # SSM document for Windows deployment
-│   └── README.md                      # SSM documents documentation
+│   ├── forticnapp-linux-agent.json       # SSM document for Linux deployment
+│   ├── forticnapp-windows-agent.json     # SSM document for Windows deployment
+│   ├── forticnapp-linux-remove.json      # SSM document for Linux removal
+│   ├── forticnapp-windows-remove.json    # SSM document for Windows removal
+│   └── README.md                         # SSM documents documentation
 ├── instances.txt.example       # Example instance list file format
 ├── README.md                   # This file
 ├── WITHOUT-SSM.md             # Alternative deployment methods

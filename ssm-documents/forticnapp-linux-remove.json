@@ -1,0 +1,130 @@
+{
+  "schemaVersion": "2.2",
+  "description": "Remove FortiCNAPP agent from Linux EC2 instances",
+  "mainSteps": [
+    {
+      "action": "aws:runShellScript",
+      "name": "stopFortiCNAPPService",
+      "inputs": {
+        "runCommand": [
+          "#!/bin/bash",
+          "set -e",
+          "",
+          "echo 'Stopping FortiCNAPP datacollector service...'",
+          "if systemctl is-active --quiet datacollector; then",
+          "    sudo systemctl stop datacollector",
+          "    echo 'Service stopped'",
+          "else",
+          "    echo 'Service not running'",
+          "fi"
+        ]
+      },
+      "onFailure": "Continue"
+    },
+    {
+      "action": "aws:runShellScript",
+      "name": "disableFortiCNAPPService",
+      "inputs": {
+        "runCommand": [
+          "#!/bin/bash",
+          "",
+          "echo 'Disabling FortiCNAPP service...'",
+          "if systemctl is-enabled --quiet datacollector 2>/dev/null; then",
+          "    sudo systemctl disable datacollector",
+          "    echo 'Service disabled'",
+          "else",
+          "    echo 'Service not enabled'",
+          "fi"
+        ]
+      },
+      "onFailure": "Continue"
+    },
+    {
+      "action": "aws:runShellScript",
+      "name": "uninstallFortiCNAPPPackage",
+      "inputs": {
+        "runCommand": [
+          "#!/bin/bash",
+          "",
+          "echo 'Removing FortiCNAPP agent package...'",
+          "",
+          "# Check for different package managers",
+          "if [ -f /var/lib/dpkg/status ] && dpkg -l | grep -q lacework; then",
+          "    # Debian/Ubuntu",
+          "    echo 'Detected Debian/Ubuntu installation'",
+          "    sudo apt-get remove -y lacework || true",
+          "    sudo apt-get purge -y lacework || true",
+          "    echo 'Package removed'",
+          "elif [ -f /var/lib/rpm/rpmdb.sqlite ] || [ -f /var/lib/rpm/Packages ]; then",
+          "    # RHEL/CentOS/Amazon Linux",
+          "    echo 'Detected RPM-based installation'",
+          "    sudo rpm -e lacework || true",
+          "    sudo yum remove -y lacework || true",
+          "    echo 'Package removed'",
+          "else",
+          "    echo 'Unable to detect package manager, skipping package removal'",
+          "fi"
+        ]
+      },
+      "onFailure": "Continue"
+    },
+    {
+      "action": "aws:runShellScript",
+      "name": "removeFortiCNAPPDirectories",
+      "inputs": {
+        "runCommand": [
+          "#!/bin/bash",
+          "",
+          "echo 'Removing FortiCNAPP directories...'",
+          "",
+          "# Remove data directories",
+          "sudo rm -rf /var/lib/lacework",
+          "sudo rm -rf /var/log/lacework",
+          "sudo rm -rf /etc/lacework",
+          "",
+          "# Remove systemd service files",
+          "sudo rm -f /etc/systemd/system/datacollector.service",
+          "sudo rm -f /usr/lib/systemd/system/datacollector.service",
+          "sudo systemctl daemon-reload",
+          "",
+          "echo 'Directories removed'"
+        ]
+      },
+      "onFailure": "Continue"
+    },
+    {
+      "action": "aws:runShellScript",
+      "name": "verifyRemoval",
+      "inputs": {
+        "runCommand": [
+          "#!/bin/bash",
+          "",
+          "echo 'Verifying removal...'",
+          "",
+          "# Check if service exists",
+          "if systemctl list-unit-files | grep -q datacollector; then",
+          "    echo 'WARNING: Service file still exists'",
+          "    exit 1",
+          "fi",
+          "",
+          "# Check if directories exist",
+          "if [ -d /var/lib/lacework ] || [ -d /var/log/lacework ]; then",
+          "    echo 'WARNING: Some directories still exist'",
+          "    exit 1",
+          "fi",
+          "",
+          "echo 'SUCCESS: FortiCNAPP agent removed successfully'",
+          "echo 'All files and services removed'"
+        ]
+      },
+      "onFailure": "Continue"
+    }
+  ],
+  "outputs": [
+    "stopFortiCNAPPService.Output",
+    "disableFortiCNAPPService.Output",
+    "uninstallFortiCNAPPPackage.Output",
+    "removeFortiCNAPPDirectories.Output",
+    "verifyRemoval.Output"
+  ]
+}

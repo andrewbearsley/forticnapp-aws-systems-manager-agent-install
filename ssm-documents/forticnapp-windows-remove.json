@@ -1,0 +1,130 @@
+{
+  "schemaVersion": "2.2",
+  "description": "Remove FortiCNAPP agent from Windows EC2 instances",
+  "mainSteps": [
+    {
+      "action": "aws:runPowerShellScript",
+      "name": "stopFortiCNAPPService",
+      "inputs": {
+        "runCommand": [
+          "# Stop LaceworkAgent service",
+          "Write-Host 'Stopping LaceworkAgent service...'",
+          "",
+          "try {",
+          "    $service = Get-Service -Name 'LaceworkAgent' -ErrorAction SilentlyContinue",
+          "    if ($service) {",
+          "        if ($service.Status -eq 'Running') {",
+          "            Stop-Service -Name 'LaceworkAgent' -Force",
+          "            Write-Host 'Service stopped successfully'",
+          "        } else {",
+          "            Write-Host 'Service is not running'",
+          "        }",
+          "    } else {",
+          "        Write-Host 'LaceworkAgent service not found'",
+          "    }",
+          "} catch {",
+          "    Write-Host \"Error stopping service: $($_.Exception.Message)\"",
+          "}"
+        ]
+      },
+      "onFailure": "Continue"
+    },
+    {
+      "action": "aws:runPowerShellScript",
+      "name": "uninstallFortiCNAPPProduct",
+      "inputs": {
+        "runCommand": [
+          "# Find and uninstall Lacework product",
+          "Write-Host 'Finding Lacework installation...'",
+          "",
+          "try {",
+          "    $product = Get-WmiObject -Class Win32_Product | Where-Object { $_.Name -like '*Lacework*' -or $_.Name -like '*FortiCNAPP*' }",
+          "    ",
+          "    if ($product) {",
+          "        Write-Host \"Found product: $($product.Name)\"",
+          "        Write-Host 'Uninstalling...'",
+          "        ",
+          "        $result = $product.Uninstall()",
+          "        ",
+          "        if ($result.ReturnValue -eq 0) {",
+          "            Write-Host 'SUCCESS: Product uninstalled successfully'",
+          "        } else {",
+          "            Write-Host \"Uninstall returned code: $($result.ReturnValue)\"",
+          "        }",
+          "    } else {",
+          "        Write-Host 'No Lacework product found in installed programs'",
+          "        Write-Host 'Will proceed with manual cleanup'",
+          "    }",
+          "} catch {",
+          "    Write-Host \"Error during uninstall: $($_.Exception.Message)\"",
+          "    Write-Host 'Will proceed with manual cleanup'",
+          "}"
+        ]
+      },
+      "onFailure": "Continue"
+    },
+    {
+      "action": "aws:runPowerShellScript",
+      "name": "removeFortiCNAPPDirectories",
+      "inputs": {
+        "runCommand": [
+          "# Remove directories",
+          "Write-Host 'Removing FortiCNAPP directories...'",
+          "",
+          "$dirsToRemove = @(",
+          "    'C:\\Program Files\\Lacework',",
+          "    'C:\\Program Files (x86)\\Lacework',",
+          "    'C:\\ProgramData\\Lacework'",
+          ")",
+          "",
+          "foreach ($dir in $dirsToRemove) {",
+          "    if (Test-Path $dir) {",
+          "        try {",
+          "            Remove-Item -Path $dir -Recurse -Force",
+          "            Write-Host \"Removed: $dir\"",
+          "        } catch {",
+          "            Write-Host \"Failed to remove $dir: $($_.Exception.Message)\"",
+          "        }",
+          "    } else {",
+          "        Write-Host \"Directory not found: $dir\"",
+          "    }",
+          "}"
+        ]
+      },
+      "onFailure": "Continue"
+    },
+    {
+      "action": "aws:runPowerShellScript",
+      "name": "verifyRemoval",
+      "inputs": {
+        "runCommand": [
+          "# Verify removal",
+          "Write-Host 'Verifying removal...'",
+          "",
+          "$serviceExists = Get-Service -Name 'LaceworkAgent' -ErrorAction SilentlyContinue",
+          "$dirExists = Test-Path 'C:\\ProgramData\\Lacework'",
+          "",
+          "if (-not $serviceExists -and -not $dirExists) {",
+          "    Write-Host 'SUCCESS: FortiCNAPP agent removed successfully'",
+          "    Write-Host 'All files and services removed'",
+          "} else {",
+          "    if ($serviceExists) {",
+          "        Write-Host 'WARNING: LaceworkAgent service still exists'",
+          "    }",
+          "    if ($dirExists) {",
+          "        Write-Host 'WARNING: Lacework directory still exists'",
+          "    }",
+          "    exit 1",
+          "}"
+        ]
+      },
+      "onFailure": "Continue"
+    }
+  ],
+  "outputs": [
+    "stopFortiCNAPPService.Output",
+    "uninstallFortiCNAPPProduct.Output",
+    "removeFortiCNAPPDirectories.Output",
+    "verifyRemoval.Output"
+  ]
+}

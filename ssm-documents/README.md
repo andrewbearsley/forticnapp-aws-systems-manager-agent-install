@@ -4,7 +4,9 @@ This directory contains AWS Systems Manager (SSM) documents for deploying FortiC
 
 ## Documents
 
-### `forticnapp-linux-agent.json`
+### Installation Documents
+
+#### `forticnapp-linux-agent.json`
 SSM document for deploying FortiCNAPP agents to Linux EC2 instances.
 
 **Features:**
@@ -18,7 +20,7 @@ SSM document for deploying FortiCNAPP agents to Linux EC2 instances.
 - `DownloadUrl` (optional): URL to download install.sh (default: https://packages.lacework.net/install.sh)
 - `InstallPath` (optional): Path to download script (default: /tmp/install.sh)
 
-### `forticnapp-windows-agent.json`
+#### `forticnapp-windows-agent.json`
 SSM document for deploying FortiCNAPP agents to Windows EC2 instances.
 
 **Features:**
@@ -36,6 +38,35 @@ SSM document for deploying FortiCNAPP agents to Windows EC2 instances.
 - `DownloadUrl` (optional): URL to download MSI (default: https://packages.lacework.net/windows/installer/LWDatacollector.msi)
 - `InstallPath` (optional): Path to download MSI (default: C:\temp\LWDatacollector.msi)
 - `ConfigPath` (optional): Path to create config.json (default: C:\temp\config.json)
+
+### Removal Documents
+
+#### `forticnapp-linux-remove.json`
+SSM document for removing FortiCNAPP agents from Linux EC2 instances.
+
+**Features:**
+- Stops datacollector service
+- Disables service from auto-start
+- Removes packages (apt/yum/rpm)
+- Deletes directories and config files
+- Removes systemd service files
+- Verifies complete removal
+
+**Parameters:**
+- None required
+
+#### `forticnapp-windows-remove.json`
+SSM document for removing FortiCNAPP agents from Windows EC2 instances.
+
+**Features:**
+- Stops LaceworkAgent service
+- Uninstalls MSI package
+- Removes installation directories
+- Removes configuration files
+- Verifies complete removal
+
+**Parameters:**
+- None required
 
 ## Usage
 
@@ -61,8 +92,9 @@ The `deploy-via-ssm-doc.sh` script automates the entire process:
 
 #### 1. Create the SSM Documents
 
+**Installation documents:**
 ```bash
-# Create Linux document
+# Create Linux installation document
 aws ssm create-document \
   --region us-east-1 \
   --content "file://ssm-documents/forticnapp-linux-agent.json" \
@@ -70,11 +102,30 @@ aws ssm create-document \
   --document-type "Command" \
   --document-format "JSON"
 
-# Create Windows document
+# Create Windows installation document
 aws ssm create-document \
   --region us-east-1 \
   --content "file://ssm-documents/forticnapp-windows-agent.json" \
   --name "FortiCNAPP-Windows-Agent" \
+  --document-type "Command" \
+  --document-format "JSON"
+```
+
+**Removal documents:**
+```bash
+# Create Linux removal document
+aws ssm create-document \
+  --region us-east-1 \
+  --content "file://ssm-documents/forticnapp-linux-remove.json" \
+  --name "FortiCNAPP-Linux-Remove" \
+  --document-type "Command" \
+  --document-format "JSON"
+
+# Create Windows removal document
+aws ssm create-document \
+  --region us-east-1 \
+  --content "file://ssm-documents/forticnapp-windows-remove.json" \
+  --name "FortiCNAPP-Windows-Remove" \
   --document-type "Command" \
   --document-format "JSON"
 ```
@@ -95,6 +146,18 @@ aws ssm send-command \
   --document-name "FortiCNAPP-Windows-Agent" \
   --instance-ids "i-0987654321fedcba0" \
   --parameters "AgentToken=your-token-here"
+
+# Remove from Linux instances
+aws ssm send-command \
+  --region us-east-1 \
+  --document-name "FortiCNAPP-Linux-Remove" \
+  --instance-ids "i-1234567890abcdef0"
+
+# Remove from Windows instances
+aws ssm send-command \
+  --region us-east-1 \
+  --document-name "FortiCNAPP-Windows-Remove" \
+  --instance-ids "i-0987654321fedcba0"
 ```
 
 #### 3. Deploy to Instances by Tag
